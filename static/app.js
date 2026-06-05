@@ -68,15 +68,23 @@ const authDetail = document.getElementById("auth-detail");
 const authWarning = document.getElementById("auth-warning");
 const signOutButton = document.getElementById("sign-out-button");
 const googleButton = document.getElementById("google-signin-button");
+const scrollBanner = document.getElementById("scroll-banner");
+const contributePanel = document.getElementById("contribute-panel");
 const adminPanel = document.getElementById("admin-panel");
 const adminPanelsControl = document.getElementById("admin-panels-control");
 const adminPanelsToggle = document.getElementById("admin-panels-toggle");
 const adminPanelsToggleText = document.getElementById("admin-panels-toggle-text");
+const bannerAdminPanelsControl = document.getElementById("banner-admin-panels-control");
+const bannerAdminPanelsToggle = document.getElementById("banner-admin-panels-toggle");
+const bannerAdminPanelsToggleText = document.getElementById("banner-admin-panels-toggle-text");
 const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
 const mobileMenuToggleLabel = document.getElementById("mobile-menu-toggle-label");
 const mobileMenuPanel = document.getElementById("mobile-menu-panel");
 const mobileMenuBackdrop = document.getElementById("mobile-menu-backdrop");
 const mobileRouteToggleLink = document.getElementById("mobile-route-toggle-link");
+const bannerRouteToggleLink = document.getElementById("banner-route-toggle-link");
+const bannerGoogleButton = document.getElementById("banner-google-signin-button");
+const bannerSignOutButton = document.getElementById("banner-sign-out-button");
 const mobileAccessPanelSlot = document.getElementById("mobile-access-panel-slot");
 const mobileAdminPanelSlot = document.getElementById("mobile-admin-panel-slot");
 const desktopAccessPanelSlot = document.getElementById("desktop-access-panel-slot");
@@ -89,7 +97,6 @@ const friendsMobileInlineList = document.getElementById("friends-mobile-inline-l
 const friendsMobileInlineCount = document.getElementById("friends-mobile-inline-count");
 const friendsMobileInlineTitle = document.getElementById("friends-mobile-inline-title");
 const authAccessLabel = document.getElementById("auth-access-label");
-const controlPanelTitle = document.getElementById("control-panel-title");
 const tripDbTitle = document.getElementById("trip-db-title");
 const uploadQueueTitle = document.getElementById("upload-queue-title");
 const uploadStatusList = document.getElementById("upload-status-list");
@@ -225,8 +232,16 @@ function applyStaticStrings() {
     signOutButton.textContent = STRINGS.auth.signOutButton;
   }
 
+  if (bannerSignOutButton) {
+    bannerSignOutButton.textContent = STRINGS.auth.signOutButton;
+  }
+
   if (desktopRouteToggleLink) {
     desktopRouteToggleLink.textContent = STRINGS.auth.profile;
+  }
+
+  if (bannerRouteToggleLink) {
+    bannerRouteToggleLink.textContent = STRINGS.auth.profile;
   }
 
   if (mobileRouteToggleLink) {
@@ -235,6 +250,14 @@ function applyStaticStrings() {
 
   if (adminPanelsToggleText) {
     adminPanelsToggleText.textContent = STRINGS.auth.showAdminPanels;
+  }
+
+  if (bannerAdminPanelsToggleText) {
+    bannerAdminPanelsToggleText.textContent = STRINGS.auth.showAdminPanels;
+  }
+
+  if (bannerGoogleButton) {
+    bannerGoogleButton.textContent = STRINGS.auth.signInButton;
   }
 
   if (mobileMenuToggle) {
@@ -256,10 +279,6 @@ function applyStaticStrings() {
 
   if (friendsMobileInlineTitle) {
     friendsMobileInlineTitle.textContent = STRINGS.members.panelTitle;
-  }
-
-  if (controlPanelTitle) {
-    controlPanelTitle.textContent = STRINGS.admin.title;
   }
 
   if (uploadQueueTitle) {
@@ -856,11 +875,15 @@ function setupForms() {
   editPostCancelButton?.addEventListener("click", resetTextPostEditor);
   editPostBackdrop?.addEventListener("click", resetTextPostEditor);
   signOutButton?.addEventListener("click", handleSignOut);
+  bannerSignOutButton?.addEventListener("click", handleSignOut);
   adminPanelsToggle?.addEventListener("change", handleAdminPanelsToggleChange);
+  bannerAdminPanelsToggle?.addEventListener("change", handleAdminPanelsToggleChange);
   mobileMenuToggle?.addEventListener("click", handleMobileMenuToggleClick);
   mobileMenuBackdrop?.addEventListener("click", () => setMobileMenuOpen(false));
   desktopRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
+  bannerRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
   mobileRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
+  bannerGoogleButton?.addEventListener("click", handleGoogleSignIn);
   uploadTripSelect?.addEventListener("change", renderAdminSelects);
   textTripSelect?.addEventListener("change", renderAdminSelects);
   friendsDesktopList?.addEventListener("change", handleRoleSelectChange);
@@ -869,10 +892,12 @@ function setupForms() {
   friendsDesktopList?.addEventListener("click", handleProfileActionClick);
   friendsMobileList?.addEventListener("click", handleProfileActionClick);
   friendsMobileInlineList?.addEventListener("click", handleProfileActionClick);
+  window.addEventListener("scroll", syncScrollBannerVisibility, { passive: true });
   window.addEventListener("resize", syncResponsivePanels);
   window.addEventListener("keydown", handleWindowKeydown);
   window.addEventListener("popstate", handleWindowPopstate);
   syncResponsivePanels();
+  syncScrollBannerVisibility();
 }
 
 function handleAdminPanelsToggleChange(event) {
@@ -903,12 +928,39 @@ function syncResponsivePanels() {
     authTargetSlot.appendChild(authPanel);
   }
 
+  if (contributePanel && targetSlot && contributePanel.parentElement !== targetSlot) {
+    targetSlot.appendChild(contributePanel);
+  }
+
   if (adminPanel && targetSlot && adminPanel.parentElement !== targetSlot) {
     targetSlot.appendChild(adminPanel);
   }
 
   if (!mobileViewport) {
     setMobileMenuOpen(false);
+  }
+
+  syncScrollBannerVisibility();
+}
+
+function shouldShowScrollBanner() {
+  if (!scrollBanner || !logo || siteShell?.getAttribute("aria-hidden") === "true") {
+    return false;
+  }
+
+  const logoRect = logo.getBoundingClientRect();
+  return window.scrollY > 0 && logoRect.bottom <= 0;
+}
+
+function syncScrollBannerVisibility() {
+  const shouldShow = shouldShowScrollBanner();
+
+  if (scrollBanner) {
+    scrollBanner.classList.toggle("pointer-events-none", !shouldShow);
+    scrollBanner.classList.toggle("opacity-0", !shouldShow);
+    scrollBanner.classList.toggle("-translate-y-3", !shouldShow);
+    scrollBanner.classList.toggle("opacity-100", shouldShow);
+    scrollBanner.classList.toggle("translate-y-0", shouldShow);
   }
 }
 
@@ -986,11 +1038,20 @@ function syncAdminPanelsToggle() {
 
   if (adminPanelsControl) {
     adminPanelsControl.classList.toggle("hidden", !shouldShow);
-    adminPanelsControl.classList.toggle("xl:flex", shouldShow);
+    adminPanelsControl.classList.toggle("flex", shouldShow);
+  }
+
+  if (bannerAdminPanelsControl) {
+    bannerAdminPanelsControl.classList.toggle("hidden", !shouldShow);
+    bannerAdminPanelsControl.classList.toggle("flex", shouldShow);
   }
 
   if (adminPanelsToggle) {
     adminPanelsToggle.checked = shouldShow && adminPanelsVisible;
+  }
+
+  if (bannerAdminPanelsToggle) {
+    bannerAdminPanelsToggle.checked = shouldShow && adminPanelsVisible;
   }
 }
 
@@ -2495,31 +2556,38 @@ function renderAll() {
   syncFeaturedMessageForm();
   renderUploadQueue();
   renderFriendsPanel();
+  syncScrollBannerVisibility();
 }
 
 function renderAuth() {
   const signedIn = Boolean(currentUser?.email);
+  const hasArchiveAccess = canUploadMedia();
   syncAdminPanelsToggle();
 
   if (desktopRouteToggleLink) {
     desktopRouteToggleLink.textContent =
       currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
-    desktopRouteToggleLink.classList.toggle("hidden", !signedIn);
-    desktopRouteToggleLink.classList.toggle("xl:inline-flex", signedIn);
+  }
+
+  if (bannerRouteToggleLink) {
+    bannerRouteToggleLink.textContent =
+      currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
   }
 
   if (mobileRouteToggleLink) {
     mobileRouteToggleLink.textContent =
       currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
-    mobileRouteToggleLink.classList.toggle("hidden", !signedIn);
   }
 
-  mobileMenuToggle?.classList.remove("hidden");
+  setElementVisible(desktopRouteToggleLink, hasArchiveAccess, "inline-flex");
+  setElementVisible(bannerRouteToggleLink, hasArchiveAccess, "inline-flex");
+  setElementVisible(mobileRouteToggleLink, hasArchiveAccess, "flex");
 
   if (!runtimeConfig) {
     authStatus.textContent = STRINGS.auth.civilianView;
     authDetail.textContent = STRINGS.auth.loading;
-    signOutButton?.classList.add("hidden");
+    setSignOutButtonsVisible(false);
+    contributePanel?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
     setGoogleButtonVisible(false);
     return;
@@ -2528,7 +2596,8 @@ function renderAuth() {
   if (!firestoreReady) {
     authStatus.textContent = STRINGS.auth.civilianView;
     authDetail.textContent = STRINGS.auth.configMissing;
-    signOutButton?.classList.add("hidden");
+    setSignOutButtonsVisible(false);
+    contributePanel?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
     setGoogleButtonVisible(false);
     return;
@@ -2537,25 +2606,24 @@ function renderAuth() {
   if (!signedIn) {
     authStatus.textContent = STRINGS.auth.civilianView;
     authDetail.textContent = firestoreAccessIssue ? STRINGS.auth.rulesBlocked : "";
-    signOutButton?.classList.add("hidden");
+    setSignOutButtonsVisible(false);
+    contributePanel?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
     setGoogleButtonVisible(true);
     return;
   }
 
-  signOutButton?.classList.remove("hidden");
+  setSignOutButtonsVisible(true);
   setGoogleButtonVisible(false);
 
   if (isAdmin()) {
     authStatus.textContent = STRINGS.auth.adminView;
     authDetail.textContent = currentUser.email;
-    adminPanel?.classList.remove("hidden");
   } else {
     authStatus.textContent = STRINGS.auth.memberView;
     authDetail.textContent = friendAccessIssue
       ? `${currentUser.email} / ${STRINGS.auth.rulesBlocked}`
       : currentUser.email;
-    adminPanel?.classList.remove("hidden");
   }
 
   syncControlPanelVisibility();
@@ -2580,17 +2648,12 @@ function syncControlPanelVisibility() {
   const signedIn = canUploadMedia();
   const adminMode = signedIn && isAdminViewEnabled();
 
-  adminPanel?.classList.toggle("hidden", !signedIn || currentRoute !== ROUTE_ARCHIVE);
+  contributePanel?.classList.toggle("hidden", !signedIn || currentRoute !== ROUTE_ARCHIVE);
+  adminPanel?.classList.toggle("hidden", !adminMode || currentRoute !== ROUTE_ARCHIVE);
   featuredMessageForm?.classList.toggle("hidden", !adminMode);
   tripForm?.classList.toggle("hidden", !adminMode);
   folderForm?.classList.toggle("hidden", !adminMode);
   textPostForm?.classList.toggle("hidden", !signedIn);
-
-  if (controlPanelTitle) {
-    controlPanelTitle.textContent = adminMode
-      ? STRINGS.admin.title
-      : STRINGS.uploads.panelTitle;
-  }
 }
 
 function renderProfilePage() {
@@ -3404,24 +3467,31 @@ function renderFriendCard(friend) {
   const badge = getRoleLabel(friend.role);
   const isCurrentUser = Boolean(currentUser?.uid && friend.uid === currentUser.uid);
   const canEditRole = isAdminViewEnabled();
-  const canDeleteProfile = isAdminViewEnabled() && !isProtectedProfile(friend);
+  const canDeleteProfile = canEditRole && !isProtectedProfile(friend);
+  const currentUserMarkup = isCurrentUser
+    ? `<span class="border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/70 xl:px-1 xl:text-[0.5rem] min-[1920px]:px-1.5 min-[1920px]:text-[0.58rem]">${STRINGS.members.you}</span>`
+    : "";
   const roleMarkup = canEditRole
     ? renderFriendControls(friend, canDeleteProfile)
-    : `<span class="border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/75">${escapeHtml(
+    : `<span class="border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/75 xl:px-1.5 xl:py-0.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-1 min-[1920px]:text-[0.58rem]">${escapeHtml(
         badge
       )}</span>`;
+  const stackedMetaMarkup = `<div class="hidden xl:flex xl:flex-wrap xl:items-center xl:gap-1.5 min-[1920px]:hidden">${currentUserMarkup}${roleMarkup}</div>`;
+  const sideRoleMarkup = `<div class="shrink-0 xl:hidden min-[1920px]:block">${roleMarkup}</div>`;
+  const inlineCurrentUserMarkup = `<div class="xl:hidden min-[1920px]:block">${currentUserMarkup}</div>`;
 
   return `
-    <article class="border border-white/10 bg-black/20 px-3 py-3">
-      <div class="flex items-center gap-3">
-        <img src="${escapeHtml(getFriendPhotoUrl(friend))}" alt="${escapeHtml(label)}" class="h-12 w-12 shrink-0 border border-white/10 bg-black object-cover object-center">
-        <div class="min-w-0 flex-1">
+    <article class="border border-white/10 bg-black/20 px-3 py-3 xl:px-2.5 xl:py-2.5 min-[1920px]:px-3 min-[1920px]:py-3">
+      <div class="flex items-start gap-3 xl:gap-2 min-[1920px]:gap-3">
+        <img src="${escapeHtml(getFriendPhotoUrl(friend))}" alt="${escapeHtml(label)}" class="h-12 w-12 shrink-0 border border-white/10 bg-black object-cover object-center xl:h-9 xl:w-9 min-[1920px]:h-12 min-[1920px]:w-12">
+        <div class="min-w-0 flex-1 space-y-2 xl:space-y-1.5 min-[1920px]:space-y-2">
           <div class="flex items-center gap-2">
-            <p class="truncate text-sm uppercase tracking-[0.14em] text-stone-100">${escapeHtml(label)}</p>
-            ${isCurrentUser ? `<span class="border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/70">${STRINGS.members.you}</span>` : ""}
+            <p class="truncate text-sm uppercase tracking-[0.14em] text-stone-100 xl:text-[0.78rem] xl:tracking-[0.12em] min-[1920px]:text-sm min-[1920px]:tracking-[0.14em]">${escapeHtml(label)}</p>
+            ${inlineCurrentUserMarkup}
           </div>
+          ${stackedMetaMarkup}
         </div>
-        ${roleMarkup}
+        ${sideRoleMarkup}
       </div>
     </article>
   `;
@@ -3429,7 +3499,7 @@ function renderFriendCard(friend) {
 
 function renderFriendControls(friend, canDeleteProfile) {
   return `
-    <div class="flex flex-col items-end gap-2">
+    <div class="flex flex-col items-start gap-2 xl:gap-1.5 min-[1920px]:gap-2">
       ${renderRoleSelect(friend)}
       ${
         canDeleteProfile
@@ -3438,7 +3508,7 @@ function renderFriendControls(friend, canDeleteProfile) {
               type="button"
               data-action="delete-profile"
               data-user-id="${escapeHtml(friend.uid || friend.id)}"
-              class="border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/75 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
+              class="border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/75 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100 xl:px-1.5 xl:py-0.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-1 min-[1920px]:text-[0.58rem]"
             >
               ${STRINGS.members.deleteProfile}
             </button>
@@ -3463,7 +3533,7 @@ function renderRoleSelect(friend) {
       data-action="role-select"
       data-user-id="${escapeHtml(friend.uid || friend.id)}"
       ${roleLocked ? "disabled" : ""}
-      class="border border-white/10 bg-black/40 px-2 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 outline-none transition focus:border-white/30"
+      class="border border-white/10 bg-black/40 px-2 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 outline-none transition focus:border-white/30 xl:px-1.5 xl:py-1.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-2 min-[1920px]:text-[0.58rem]"
     >
       ${options.join("")}
     </select>
@@ -3579,11 +3649,25 @@ function showWarning(message) {
 }
 
 function setGoogleButtonVisible(visible) {
-  if (!googleButton) {
+  setElementVisible(googleButton, visible);
+  setElementVisible(bannerGoogleButton, visible, "inline-flex");
+}
+
+function setSignOutButtonsVisible(visible) {
+  setElementVisible(signOutButton, visible, "flex");
+  setElementVisible(bannerSignOutButton, visible, "inline-flex");
+}
+
+function setElementVisible(element, visible, displayClass = "") {
+  if (!element) {
     return;
   }
 
-  googleButton.classList.toggle("hidden", !visible);
+  element.classList.toggle("hidden", !visible);
+
+  if (displayClass) {
+    element.classList.toggle(displayClass, visible);
+  }
 }
 
 function getNextTripSortOrder() {

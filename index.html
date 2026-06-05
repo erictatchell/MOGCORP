@@ -39,7 +39,37 @@
     <div aria-hidden="true" class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_24%)]"></div>
 
     <div class="relative">
-      <button id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu-panel" class="fixed right-5 top-5 z-40 hidden border border-white/12 bg-black/55 px-3 py-3 text-stone-100 shadow-[0_12px_48px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:border-white/30 hover:bg-black/70 xl:hidden">
+      <div id="scroll-banner" class="pointer-events-none fixed inset-x-0 top-0 z-50 flex -translate-y-3 items-center justify-between gap-4 border-b border-white/10 bg-neutral-950/45 px-4 py-3 opacity-0 shadow-[0_18px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-all duration-300 sm:px-6">
+        <a href="/" class="font-['Teko',sans-serif] text-[2rem] uppercase leading-[0.8] tracking-[0.12em] text-stone-100 sm:text-[2.3rem]">
+          100GIGZ
+        </a>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div id="scroll-banner-desktop-actions" class="hidden items-center gap-2 xl:flex">
+            <label id="banner-admin-panels-control" class="hidden items-center gap-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200/82">
+              <span id="banner-admin-panels-toggle-text">Show Admin Panels</span>
+              <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
+                <input id="banner-admin-panels-toggle" type="checkbox" class="peer sr-only">
+                <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-amber-200"></span>
+              </span>
+            </label>
+
+            <button id="banner-route-toggle-link" type="button" class="hidden justify-center border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.64rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+              Profile
+            </button>
+
+            <button id="banner-google-signin-button" type="button" class="hidden justify-center border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.64rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-cyan-100/30 hover:bg-cyan-100/[0.08]">
+              Sign In With Google
+            </button>
+
+            <button id="banner-sign-out-button" type="button" class="hidden justify-center border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.64rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu-panel" class="fixed right-3 top-2.5 z-[55] flex h-10 w-10 items-center justify-center border border-white/12 bg-black/30 text-stone-100 shadow-[0_12px_32px_rgba(0,0,0,0.24)] backdrop-blur-sm transition hover:border-white/30 hover:bg-white/[0.08] xl:hidden sm:right-6 sm:top-2.5">
         <span id="mobile-menu-toggle-label" class="sr-only">Open Menu</span>
         <span aria-hidden="true" class="flex flex-col gap-1.5">
           <span class="block h-px w-5 bg-current"></span>
@@ -55,7 +85,7 @@
           <div id="mobile-access-panel-slot"></div>
 
           <div class="grid gap-2 border border-white/10 bg-white/[0.03] p-3">
-            <button id="mobile-route-toggle-link" type="button" class="flex w-full justify-center border border-white/10 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+            <button id="mobile-route-toggle-link" type="button" class="hidden w-full justify-center border border-white/10 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
               Profile
             </button>
           </div>
@@ -107,20 +137,20 @@
             </div>
 
             <div class="flex flex-col items-start gap-3 sm:items-end">
-              <label id="admin-panels-control" class="hidden items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 xl:flex">
+              <label id="admin-panels-control" class="hidden items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82">
                 <span id="admin-panels-toggle-text">Show Admin Panels</span>
                 <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
                   <input id="admin-panels-toggle" type="checkbox" class="peer sr-only">
                   <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-amber-200"></span>
                 </span>
               </label>
-              <button id="desktop-route-toggle-link" type="button" class="hidden max-xl:hidden justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:inline-flex xl:w-40">
+              <button id="desktop-route-toggle-link" type="button" class="hidden justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
                 Profile
               </button>
               <button id="google-signin-button" type="button" class="hidden border border-white/12 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
                 Sign In With Google
               </button>
-              <button id="sign-out-button" type="button" class="hidden flex w-full items-center justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
+              <button id="sign-out-button" type="button" class="hidden w-full items-center justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
                 Sign Out
               </button>
             </div>
@@ -133,81 +163,21 @@
         </div>
       </header>
 
-      <div class="mt-5 grid gap-8 sm:mt-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_480px]">
+      <div class="mt-5 grid gap-8 sm:mt-8 xl:grid-cols-[minmax(0,4fr)_minmax(15rem,1fr)] xl:items-start min-[1920px]:grid-cols-[minmax(0,1fr)_420px]">
         <div class="min-w-0">
-      <div id="desktop-control-panel-slot">
-      <details id="admin-panel" class="hidden border border-dashed border-amber-300/70 bg-amber-100/[0.04] shadow-[inset_0_0_0_1px_rgba(251,191,36,0.08)] group">
+      <div id="desktop-control-panel-slot" class="space-y-4">
+      <details id="contribute-panel" class="hidden border border-cyan-200/28 bg-cyan-200/[0.05] shadow-[inset_0_0_0_1px_rgba(165,243,252,0.08)] group">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 sm:px-5 sm:py-5">
-          <p id="control-panel-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-amber-100/78">
-            Admin Tools
+          <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-cyan-100/85">
+            Contribute
           </p>
-          <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.22em] text-amber-100/62">
+          <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.22em] text-cyan-100/62">
             Menu
           </span>
         </summary>
 
-        <div class="border-t border-amber-200/18 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
-        <div class="grid gap-5 2xl:grid-cols-2">
-          <form id="featured-message-form" class="space-y-4 border border-white/10 p-4">
-            <p id="featured-message-form-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
-              Featured Message
-            </p>
-
-            <label class="block">
-              <span id="featured-message-input-label" class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Message</span>
-              <textarea id="featured-message-input" name="featuredMessage" rows="3" maxlength="180" placeholder="2026 LOADING.." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
-            </label>
-
-            <button id="featured-message-submit" type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
-              Save Featured Message
-            </button>
-          </form>
-
-          <form id="trip-form" class="space-y-4 border border-white/10 p-4">
-            <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
-              New Trip
-            </p>
-
-            <label class="block">
-              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Trip label</span>
-              <input id="trip-label-input" name="tripLabel" maxlength="40" placeholder="MONTREAL 25" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
-            </label>
-
-            <label class="block">
-              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Trip folder slug</span>
-              <input id="trip-slug-input" name="tripSlug" maxlength="40" placeholder="mtl-25" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
-            </label>
-
-            <label class="block">
-              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Folder seeds</span>
-              <input id="trip-folders-input" name="tripFolders" maxlength="120" placeholder="thu,fri,sat,sun,mon,movie" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35">
-            </label>
-
-            <button type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
-              Create Trip
-            </button>
-          </form>
-
-          <form id="folder-form" class="space-y-4 border border-white/10 p-4">
-            <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
-              New Folder
-            </p>
-
-            <label class="block">
-              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Trip</span>
-              <select id="folder-trip-select" name="tripId" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition focus:border-white/35" required></select>
-            </label>
-
-            <label class="block">
-              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Folder name</span>
-              <input id="folder-name-input" name="folderLabel" maxlength="24" placeholder="fri" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
-            </label>
-
-            <button type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
-              Create Folder
-            </button>
-          </form>
-
+        <div class="border-t border-cyan-100/15 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
+        <div class="grid gap-5 xl:grid-cols-2">
           <form id="upload-form" class="space-y-4 border border-white/10 p-4">
             <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
               Upload Media
@@ -279,6 +249,82 @@
           </div>
           <div id="upload-status-list" class="mt-4 space-y-2"></div>
         </section>
+        </div>
+      </details>
+
+      <details id="admin-panel" class="hidden border border-dashed border-amber-300/70 bg-amber-100/[0.04] shadow-[inset_0_0_0_1px_rgba(251,191,36,0.08)] group">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 sm:px-5 sm:py-5">
+          <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-amber-100/78">
+            Admin Tools
+          </p>
+          <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.22em] text-amber-100/62">
+            Menu
+          </span>
+        </summary>
+
+        <div class="border-t border-amber-200/18 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
+        <div class="grid gap-5 2xl:grid-cols-2">
+          <form id="featured-message-form" class="space-y-4 border border-white/10 p-4">
+            <p id="featured-message-form-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
+              Featured Message
+            </p>
+
+            <label class="block">
+              <span id="featured-message-input-label" class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Message</span>
+              <textarea id="featured-message-input" name="featuredMessage" rows="3" maxlength="180" placeholder="2026 LOADING.." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+            </label>
+
+            <button id="featured-message-submit" type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+              Save Featured Message
+            </button>
+          </form>
+
+          <form id="trip-form" class="space-y-4 border border-white/10 p-4">
+            <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
+              New Trip
+            </p>
+
+            <label class="block">
+              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Trip label</span>
+              <input id="trip-label-input" name="tripLabel" maxlength="40" placeholder="MONTREAL 25" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Trip folder slug</span>
+              <input id="trip-slug-input" name="tripSlug" maxlength="40" placeholder="mtl-25" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Folder seeds</span>
+              <input id="trip-folders-input" name="tripFolders" maxlength="120" placeholder="thu,fri,sat,sun,mon,movie" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35">
+            </label>
+
+            <button type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+              Create Trip
+            </button>
+          </form>
+
+          <form id="folder-form" class="space-y-4 border border-white/10 p-4">
+            <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
+              New Folder
+            </p>
+
+            <label class="block">
+              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Trip</span>
+              <select id="folder-trip-select" name="tripId" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition focus:border-white/35" required></select>
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Folder name</span>
+              <input id="folder-name-input" name="folderLabel" maxlength="24" placeholder="fri" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
+            </label>
+
+            <button type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+              Create Folder
+            </button>
+          </form>
+
+        </div>
         </div>
       </details>
       </div>
@@ -355,7 +401,7 @@
       </section>
         </div>
 
-        <aside class="hidden border border-white/10 bg-white/[0.03] p-5 xl:sticky xl:top-8 xl:block">
+        <aside class="hidden border border-white/10 bg-white/[0.03] p-5 xl:sticky xl:top-24 xl:block">
           <div class="flex items-end justify-between border-b border-white/10 pb-4">
             <div>
               <p id="friends-desktop-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/65">
