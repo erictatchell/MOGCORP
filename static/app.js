@@ -3460,6 +3460,11 @@ function normalizeItemSortMode(value) {
 }
 
 function compareItems(left, right, sortMode) {
+  const sequenceComparison = compareSequenceNamedItems(left, right, sortMode);
+  if (sequenceComparison !== null) {
+    return sequenceComparison;
+  }
+
   if (sortMode === ITEM_SORT_MEDIA_DATE_ASC) {
     return compareAscending(
       getSortableMediaDateMs(left),
@@ -3479,6 +3484,32 @@ function compareItems(left, right, sortMode) {
     left,
     right
   );
+}
+
+function compareSequenceNamedItems(left, right, sortMode) {
+  if (
+    sortMode === ITEM_SORT_RECENTLY_ADDED ||
+    left?.kind !== "file" ||
+    right?.kind !== "file"
+  ) {
+    return null;
+  }
+
+  const leftSequence = getItemSequenceNumber(left);
+  const rightSequence = getItemSequenceNumber(right);
+
+  if (leftSequence === null || rightSequence === null || leftSequence === rightSequence) {
+    return null;
+  }
+
+  return sortMode === ITEM_SORT_MEDIA_DATE_ASC
+    ? leftSequence - rightSequence
+    : rightSequence - leftSequence;
+}
+
+function getItemSequenceNumber(item) {
+  const baseName = getItemDisplayName(item).replace(/\.[^.]+$/, "").trim();
+  return /^\d+$/.test(baseName) ? Number.parseInt(baseName, 10) : null;
 }
 
 function getSortableMediaDateMs(item) {
