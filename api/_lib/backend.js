@@ -37,6 +37,7 @@ export function buildPublicConfig() {
     collections: {
       users: process.env.FIREBASE_USERS_COLLECTION || "users",
       trips: process.env.FIREBASE_TRIPS_COLLECTION || "trips",
+      settings: process.env.FIREBASE_SETTINGS_COLLECTION || "settings",
     },
   };
 }

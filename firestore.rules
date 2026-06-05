@@ -37,13 +37,13 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         isBootstrapAdmin() ||
-        currentUserRole() in ['owner', 'admin']
+        currentUserRole() == 'admin'
       );
     }
 
     function isValidRole(role, email) {
       return (
-        isBootstrapAdminEmail(email) && role == 'owner'
+        isBootstrapAdminEmail(email) && role == 'admin'
       ) || (
         !isBootstrapAdminEmail(email) && role in ['friend', 'admin']
       );
@@ -58,7 +58,8 @@ service cloud.firestore {
 
     function isValidUserState(userId) {
       return hasStableIdentity(userId)
-        && request.resource.data.isAdmin == (request.resource.data.role in ['owner', 'admin'])
+        && request.resource.data.photoStoragePath is string
+        && request.resource.data.isAdmin == (request.resource.data.role == 'admin')
         && isValidRole(request.resource.data.role, request.resource.data.email);
     }
 
@@ -67,7 +68,7 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && isValidUserState(userId)
         && (
-          (isBootstrapAdmin() && request.resource.data.role == 'owner') ||
+          (isBootstrapAdmin() && request.resource.data.role == 'admin') ||
           (!isBootstrapAdmin() && request.resource.data.role == 'friend')
         );
     }
@@ -75,15 +76,31 @@ service cloud.firestore {
     function isValidSelfUpdate() {
       return request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
+        && request.resource.data.displayName == resource.data.displayName
         && request.resource.data.role == resource.data.role
-        && request.resource.data.isAdmin == resource.data.isAdmin;
+        && request.resource.data.isAdmin == resource.data.isAdmin
+        && request.resource.data.photoURL is string
+        && request.resource.data.photoStoragePath is string;
     }
 
     function isValidAdminUpdate(userId) {
       return resource != null
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
+        && (
+          request.auth.uid != userId ||
+          (
+            request.resource.data.role == resource.data.role
+            && request.resource.data.isAdmin == resource.data.isAdmin
+          )
+        )
         && isValidUserState(userId);
+    }
+
+    function isValidSiteSettings() {
+      return request.resource.data.featuredMessage is string
+        && request.resource.data.featuredMessage.size() > 0
+        && request.resource.data.featuredMessage.size() <= 180;
     }
 
     function isValidMemberMediaCreate() {
@@ -147,13 +164,19 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if request.auth.uid == userId || isMember();
+      allow read: if true;
       allow create: if isSignedIn() && isValidSelfCreate(userId);
       allow update: if isSignedIn()
         && (
           (request.auth.uid == userId && isValidSelfUpdate()) ||
           (isAdmin() && isValidAdminUpdate(userId))
         );
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSiteSettings();
       allow delete: if isAdmin();
     }
 

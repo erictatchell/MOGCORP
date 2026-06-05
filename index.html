@@ -39,7 +39,7 @@
     <div aria-hidden="true" class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_24%)]"></div>
 
     <div class="relative">
-      <button id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu-panel" class="fixed right-5 top-5 z-40 border border-white/12 bg-black/55 px-3 py-3 text-stone-100 shadow-[0_12px_48px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:border-white/30 hover:bg-black/70 xl:hidden">
+      <button id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu-panel" class="fixed right-5 top-5 z-40 hidden border border-white/12 bg-black/55 px-3 py-3 text-stone-100 shadow-[0_12px_48px_rgba(0,0,0,0.4)] backdrop-blur-sm transition hover:border-white/30 hover:bg-black/70 xl:hidden">
         <span id="mobile-menu-toggle-label" class="sr-only">Open Menu</span>
         <span aria-hidden="true" class="flex flex-col gap-1.5">
           <span class="block h-px w-5 bg-current"></span>
@@ -52,6 +52,14 @@
 
       <aside id="mobile-menu-panel" class="fixed right-3 top-20 z-40 hidden w-[min(26rem,calc(100vw-1.5rem))] max-h-[calc(100vh-6rem)] overflow-auto border border-white/10 bg-neutral-950/96 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-md xl:hidden">
         <div id="mobile-menu-content" class="space-y-4">
+          <div id="mobile-access-panel-slot"></div>
+
+          <div class="grid gap-2 border border-white/10 bg-white/[0.03] p-3">
+            <button id="mobile-route-toggle-link" type="button" class="flex w-full justify-center border border-white/10 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+              Profile
+            </button>
+          </div>
+
           <div id="mobile-admin-panel-slot"></div>
 
           <details id="friends-mobile-panel" class="border border-white/10 bg-white/[0.03]">
@@ -68,47 +76,51 @@
         </div>
       </aside>
 
-      <header class="flex flex-col gap-8 border-b border-white/10 pb-8 xl:flex-row xl:items-start xl:justify-between">
+      <header class="flex flex-col gap-5 border-b border-white/10 pb-5 sm:gap-8 sm:pb-8 xl:flex-row xl:items-start xl:justify-between">
         <div class="max-w-3xl">
           <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.35em] text-stone-300/65 sm:text-[0.8rem]">
             100GIGZ / ARCHIVE
           </p>
-          <h1 id="logo" class="mt-3 font-['Teko',sans-serif] text-[clamp(3.4rem,13vw,8.6rem)] font-medium uppercase leading-[0.72] tracking-[0.08em] text-stone-100 opacity-100 transition-[opacity,transform] duration-[1400ms] ease-out sm:tracking-[0.12em]">
+          <a id="logo" href="/" class="mt-2 inline-block font-['Teko',sans-serif] text-[clamp(3.4rem,13vw,8.6rem)] font-medium uppercase leading-[0.72] tracking-[0.08em] text-stone-100 opacity-100 transition-[opacity,transform] duration-[1400ms] ease-out sm:mt-3 sm:tracking-[0.12em]">
             100GIGZ 
-          </h1>
-          <p class="mt-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.28em] text-stone-300/58 sm:text-[0.72rem]">
+          </a>
+          <p class="mt-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.28em] text-stone-300/58 sm:mt-4 sm:text-[0.72rem]">
             Featured Message
           </p>
-          <p id="loading-text" class="mt-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.92rem] uppercase tracking-[0.22em] text-stone-200/72 sm:text-[1rem] sm:tracking-[0.28em]">
-            &gt; 2026 LOADING..
+          <p id="loading-text" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.92rem] uppercase tracking-[0.22em] text-stone-200/72 sm:mt-3 sm:text-[1rem] sm:tracking-[0.28em]">
+            &gt; LOADING..
           </p>
         </div>
 
-        <aside class="w-full max-w-xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+        <div id="desktop-access-panel-slot" class="hidden w-full xl:block xl:w-[420px] 2xl:w-[480px]">
+        <aside id="auth-panel" class="w-full max-w-none border border-white/10 bg-white/[0.03] p-3 sm:p-5">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p id="auth-access-label" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/65">
                 Access
               </p>
-              <p id="auth-status" class="mt-2 text-lg uppercase tracking-[0.18em] text-stone-100">
-                PUBLIC VIEW
+              <p id="auth-status" class="mt-2 text-base uppercase tracking-[0.18em] text-stone-100 sm:text-lg">
+                CIVILIAN
               </p>
               <p id="auth-detail" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-xs uppercase tracking-[0.18em] text-stone-300/60">
               </p>
             </div>
 
             <div class="flex flex-col items-start gap-3 sm:items-end">
-              <label id="admin-panels-control" class="hidden items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82">
+              <label id="admin-panels-control" class="hidden items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 xl:flex">
                 <span id="admin-panels-toggle-text">Show Admin Panels</span>
                 <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
                   <input id="admin-panels-toggle" type="checkbox" class="peer sr-only">
                   <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-amber-200"></span>
                 </span>
               </label>
+              <button id="desktop-route-toggle-link" type="button" class="hidden max-xl:hidden justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:inline-flex xl:w-40">
+                Profile
+              </button>
               <button id="google-signin-button" type="button" class="hidden border border-white/12 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
                 Sign In With Google
               </button>
-              <button id="sign-out-button" type="button" class="hidden border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]">
+              <button id="sign-out-button" type="button" class="hidden flex w-full items-center justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
                 Sign Out
               </button>
             </div>
@@ -118,9 +130,10 @@
             CONFIG MISSING.
           </div>
         </aside>
+        </div>
       </header>
 
-      <div class="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+      <div class="mt-5 grid gap-8 sm:mt-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_480px]">
         <div class="min-w-0">
       <div id="desktop-control-panel-slot">
       <details id="admin-panel" class="hidden border border-dashed border-amber-300/70 bg-amber-100/[0.04] shadow-[inset_0_0_0_1px_rgba(251,191,36,0.08)] group">
@@ -135,6 +148,21 @@
 
         <div class="border-t border-amber-200/18 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
         <div class="grid gap-5 2xl:grid-cols-2">
+          <form id="featured-message-form" class="space-y-4 border border-white/10 p-4">
+            <p id="featured-message-form-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
+              Featured Message
+            </p>
+
+            <label class="block">
+              <span id="featured-message-input-label" class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Message</span>
+              <textarea id="featured-message-input" name="featuredMessage" rows="3" maxlength="180" placeholder="2026 LOADING.." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+            </label>
+
+            <button id="featured-message-submit" type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+              Save Featured Message
+            </button>
+          </form>
+
           <form id="trip-form" class="space-y-4 border border-white/10 p-4">
             <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
               New Trip
@@ -255,7 +283,7 @@
       </details>
       </div>
 
-      <section class="mt-8">
+      <section id="archive-page" class="mt-8">
         <div class="flex items-center justify-between border-b border-white/10 pb-4">
           <p id="trip-db-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/65">
             TRIP DB
@@ -266,6 +294,64 @@
         </div>
 
         <div id="trip-list" class="mt-6 space-y-6"></div>
+      </section>
+
+      <section id="profile-page" class="mt-8 hidden border border-white/10 bg-white/[0.02] p-5 sm:p-6">
+        <div class="border-b border-white/10 pb-4">
+          <p id="profile-page-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/65">
+            Profile
+          </p>
+          <p id="profile-page-subtitle" class="mt-3 text-2xl uppercase tracking-[0.16em] text-stone-100">
+            Custom Image
+          </p>
+          <p id="profile-page-helper" class="mt-3 max-w-xl font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.16em] text-stone-300/62">
+            Upload A Custom Profile Image Stored In 100GIGZ.
+          </p>
+        </div>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+          <div class="border border-white/10 bg-black/25 p-4">
+            <p id="profile-current-image-label" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/65">
+              Current Image
+            </p>
+            <div class="mt-4 aspect-square max-w-[20rem] overflow-hidden border border-white/10 bg-black">
+              <img id="profile-image-preview" src="/static/default-profile.svg" alt="Profile preview" class="h-full w-full object-cover object-center">
+            </div>
+          </div>
+
+          <div class="border border-white/10 bg-black/25 p-4">
+            <div class="space-y-4">
+              <div>
+                <p id="profile-name-display" class="text-lg uppercase tracking-[0.14em] text-stone-100"></p>
+                <p id="profile-email-display" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.16em] text-stone-300/62"></p>
+              </div>
+
+              <form id="profile-image-form" class="space-y-4">
+                <label class="block">
+                  <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/65">Image</span>
+                  <input id="profile-image-input" name="profileImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition file:mr-4 file:border-0 file:bg-white/8 file:px-3 file:py-2 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.68rem] file:uppercase file:tracking-[0.18em] file:text-stone-200 focus:border-white/35">
+                </label>
+
+                <button id="profile-image-submit" type="submit" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04] sm:w-auto sm:min-w-48">
+                  Upload Image
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="friends-mobile-inline-shell" class="mt-8 xl:hidden">
+        <details id="friends-mobile-inline-panel" class="border border-white/10 bg-white/[0.03]">
+          <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100">
+            <span id="friends-mobile-inline-title">Members</span>
+            <span id="friends-mobile-inline-count" class="text-stone-300/60">0000 MEMBERS</span>
+          </summary>
+          <div class="border-t border-white/10 px-4 py-4">
+            <p id="friends-mobile-inline-status" class="hidden font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/60"></p>
+            <div id="friends-mobile-inline-list" class="mt-4 space-y-2"></div>
+          </div>
+        </details>
       </section>
         </div>
 

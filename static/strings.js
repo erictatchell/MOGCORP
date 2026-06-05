@@ -2,17 +2,19 @@ export const STRINGS = {
   brand: "100GIGZ",
   auth: {
     access: "Access",
-    publicView: "PUBLIC VIEW",
-    memberView: "MEMBER VIEW",
-    adminView: "ADMIN VIEW",
-    loading: "2026 LOADING..",
+    civilianView: "CIVILIAN",
+    memberView: "MEMBER",
+    adminView: "ADMIN",
+    loading: "LOADING..",
     configMissing: "CONFIG MISSING.",
     rulesBlocked: "RULES BLOCKED.",
-    signInButton: "Sign In With Google",
+    signInButton: "Sign In",
     signOutButton: "Sign Out",
     signingIn: "SIGNING IN WITH GOOGLE...",
     showAdminPanels: "Show Admin Panels",
     openMenu: "Open Menu",
+    profile: "Profile",
+    archive: "Archive",
   },
   members: {
     panelTitle: "Members",
@@ -20,15 +22,14 @@ export const STRINGS = {
     empty: "EMPTY",
     unknown: "Unknown Member",
     you: "YOU",
-    guestPrompt: "SIGN IN",
     role: {
       friend: "MEMBER",
       admin: "ADMIN",
-      owner: "OWNER",
     },
     deleteProfile: "Delete Profile",
     deleteProfileConfirm: (name) => `Delete ${name}'s profile from 100GIGZ?`,
     deleteProfileDone: (name) => `${name.toUpperCase()} PROFILE DELETED`,
+    selfRoleLocked: "YOU CANNOT CHANGE YOUR OWN ADMIN ROLE.",
   },
   trips: {
     listTitle: "TRIP DB",
@@ -68,6 +69,11 @@ export const STRINGS = {
   },
   admin: {
     title: "Admin Tools",
+    featuredMessageTitle: "Featured Message",
+    featuredMessageLabel: "Message",
+    featuredMessagePlaceholder: "LOADING..",
+    featuredMessageSave: "Save Featured Message",
+    featuredMessageSaved: "FEATURED MESSAGE UPDATED.",
     tripCreateTitle: "New Trip",
     folderCreateTitle: "New Folder",
     textPostTitle: "New Text Post",
@@ -75,6 +81,17 @@ export const STRINGS = {
     editTextPostTitle: "Edit Text Post",
     saveTextPost: "Save Changes",
     cancelEdit: "Cancel Edit",
+  },
+  profile: {
+    title: "Profile",
+    subtitle: "Custom Image",
+    helper: "Upload A Custom Profile Image Stored In 100GIGZ.",
+    signInRequired: "Sign In To Manage Your Profile.",
+    uploadButton: "Upload Image",
+    uploading: "UPLOADING PROFILE IMAGE...",
+    uploadDone: "PROFILE IMAGE UPDATED",
+    uploadFailed: "Could Not Update Profile Image.",
+    currentImage: "Current Image",
   },
   items: {
     sortLabel: "Sort",
@@ -115,6 +132,8 @@ export const STRINGS = {
     profileDeleteFailed: "Could not delete profile.",
     tripDeleteFailed: "Could not delete trip.",
     tripMoveFailed: "Could not move trip.",
+    profileImageFailed: "Could not update profile image.",
+    featuredMessageFailed: "Could not update featured message.",
   },
   firebase: {
     firestoreRulesBlocked:
@@ -135,6 +154,8 @@ export const STRINGS = {
       "UPLOAD FAILED BEFORE STORAGE ACCEPTED THE REQUEST. ENABLE FIREBASE STORAGE, MAKE SURE THE PROJECT IS ON BLAZE, AND VERIFY THE STORAGE BUCKET IS ACTIVE.",
     storageTimedOut:
       "UPLOAD TIMED OUT. IF STORAGE IS NEW, FINISH FIREBASE STORAGE SETUP AND TRY AGAIN.",
+    profileImageType: "PROFILE IMAGE MUST BE PNG, JPG, WEBP, OR GIF.",
+    profileImageSize: "PROFILE IMAGE MUST BE 10MB OR SMALLER.",
   },
 };
 

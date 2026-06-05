@@ -1,11 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
   signOut as firebaseSignOut,
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+} from "firebase/auth";
 import {
   collectionGroup,
   collection,
@@ -20,7 +20,7 @@ import {
   serverTimestamp,
   setDoc,
   where,
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+} from  "firebase/firestore";
 import {
   deleteObject,
   getDownloadURL,
@@ -28,7 +28,7 @@ import {
   listAll,
   ref as storageRef,
   uploadBytesResumable,
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
+} from "firebase/storage";
 import { STRINGS, padCount } from "./strings.js";
 
 const DAY_FOLDERS = ["thu", "fri", "sat", "sun", "mon"];
@@ -76,18 +76,9 @@ const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
 const mobileMenuToggleLabel = document.getElementById("mobile-menu-toggle-label");
 const mobileMenuPanel = document.getElementById("mobile-menu-panel");
 const mobileMenuBackdrop = document.getElementById("mobile-menu-backdrop");
-const mobileRouteToggleLink = document.getElementById("mobile-route-toggle-link");
-const mobileAccessPanelSlot = document.getElementById("mobile-access-panel-slot");
 const mobileAdminPanelSlot = document.getElementById("mobile-admin-panel-slot");
-const desktopAccessPanelSlot = document.getElementById("desktop-access-panel-slot");
 const desktopControlPanelSlot = document.getElementById("desktop-control-panel-slot");
-const authPanel = document.getElementById("auth-panel");
 const friendsMobilePanel = document.getElementById("friends-mobile-panel");
-const friendsMobileInlineShell = document.getElementById("friends-mobile-inline-shell");
-const friendsMobileInlineStatus = document.getElementById("friends-mobile-inline-status");
-const friendsMobileInlineList = document.getElementById("friends-mobile-inline-list");
-const friendsMobileInlineCount = document.getElementById("friends-mobile-inline-count");
-const friendsMobileInlineTitle = document.getElementById("friends-mobile-inline-title");
 const authAccessLabel = document.getElementById("auth-access-label");
 const controlPanelTitle = document.getElementById("control-panel-title");
 const tripDbTitle = document.getElementById("trip-db-title");
@@ -101,19 +92,6 @@ const friendsDesktopList = document.getElementById("friends-desktop-list");
 const friendsMobileList = document.getElementById("friends-mobile-list");
 const friendsDesktopTitle = document.getElementById("friends-desktop-title");
 const friendsMobileTitle = document.getElementById("friends-mobile-title");
-const desktopRouteToggleLink = document.getElementById("desktop-route-toggle-link");
-const archivePage = document.getElementById("archive-page");
-const profilePage = document.getElementById("profile-page");
-const profilePageTitle = document.getElementById("profile-page-title");
-const profilePageSubtitle = document.getElementById("profile-page-subtitle");
-const profilePageHelper = document.getElementById("profile-page-helper");
-const profileNameDisplay = document.getElementById("profile-name-display");
-const profileEmailDisplay = document.getElementById("profile-email-display");
-const profileImagePreview = document.getElementById("profile-image-preview");
-const profileImageForm = document.getElementById("profile-image-form");
-const profileImageInput = document.getElementById("profile-image-input");
-const profileImageSubmit = document.getElementById("profile-image-submit");
-const profileCurrentImageLabel = document.getElementById("profile-current-image-label");
 
 const tripForm = document.getElementById("trip-form");
 const folderForm = document.getElementById("folder-form");
@@ -142,24 +120,14 @@ const editPostBodyInput = document.getElementById("edit-post-body-input");
 const editPostCloseButton = document.getElementById("edit-post-close-button");
 const editPostCancelButton = document.getElementById("edit-post-cancel-button");
 const editPostSaveButton = document.getElementById("edit-post-save-button");
-const featuredMessageForm = document.getElementById("featured-message-form");
-const featuredMessageFormTitle = document.getElementById("featured-message-form-title");
-const featuredMessageInputLabel = document.getElementById("featured-message-input-label");
-const featuredMessageInput = document.getElementById("featured-message-input");
-const featuredMessageSubmit = document.getElementById("featured-message-submit");
-const DEFAULT_PROFILE_IMAGE_URL = "/static/default-profile.svg";
 const ROLE_FRIEND = "friend";
 const ROLE_ADMIN = "admin";
-const ROUTE_ARCHIVE = "archive";
-const ROUTE_PROFILE = "profile";
+const ROLE_OWNER = "owner";
 const MAX_VIDEO_UPLOADS_PER_DAY = 10;
 const MAX_VIDEO_SIZE_BYTES = 500 * 1024 * 1024;
-const MAX_PROFILE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const ITEM_SORT_MEDIA_DATE_DESC = "media-date-desc";
 const ITEM_SORT_MEDIA_DATE_ASC = "media-date-asc";
 const ITEM_SORT_RECENTLY_ADDED = "recently-added";
-const FEATURED_MESSAGE_DOC_ID = "site-content";
-const DEFAULT_FEATURED_MESSAGE = STRINGS.auth.loading;
 
 let runtimeConfig = null;
 let firebaseApp = null;
@@ -186,23 +154,19 @@ let currentTextPostEdit = null;
 let adminPanelsVisible = false;
 let mobileMenuOpen = false;
 let editPostModalOpen = false;
-let currentRoute = normalizeRoute(window.location.pathname);
-let featuredMessage = DEFAULT_FEATURED_MESSAGE;
 let vaultState = {
   configured: false,
   unlocked: false,
   videoPath: "/assets/vault-intro.mp4",
-  message: "",
 };
 let appInitializationPromise = null;
 let vaultIntroPlaying = false;
 let tripUnsubscribe = null;
 let usersUnsubscribe = null;
-let siteSettingsUnsubscribe = null;
 const folderUnsubscribers = new Map();
 
 applyStaticStrings();
-renderFeaturedMessage();
+startLoadingAnimation();
 startLogoPulse();
 renderAll();
 setupForms();
@@ -225,14 +189,6 @@ function applyStaticStrings() {
     signOutButton.textContent = STRINGS.auth.signOutButton;
   }
 
-  if (desktopRouteToggleLink) {
-    desktopRouteToggleLink.textContent = STRINGS.auth.profile;
-  }
-
-  if (mobileRouteToggleLink) {
-    mobileRouteToggleLink.textContent = STRINGS.auth.profile;
-  }
-
   if (adminPanelsToggleText) {
     adminPanelsToggleText.textContent = STRINGS.auth.showAdminPanels;
   }
@@ -252,10 +208,6 @@ function applyStaticStrings() {
 
   if (friendsMobileTitle) {
     friendsMobileTitle.textContent = STRINGS.members.panelTitle;
-  }
-
-  if (friendsMobileInlineTitle) {
-    friendsMobileInlineTitle.textContent = STRINGS.members.panelTitle;
   }
 
   if (controlPanelTitle) {
@@ -297,48 +249,9 @@ function applyStaticStrings() {
   if (editPostSaveButton) {
     editPostSaveButton.textContent = STRINGS.admin.saveTextPost;
   }
-
-  if (profilePageTitle) {
-    profilePageTitle.textContent = STRINGS.profile.title;
-  }
-
-  if (profilePageSubtitle) {
-    profilePageSubtitle.textContent = STRINGS.profile.subtitle;
-  }
-
-  if (profilePageHelper) {
-    profilePageHelper.textContent = STRINGS.profile.helper;
-  }
-
-  if (profileCurrentImageLabel) {
-    profileCurrentImageLabel.textContent = STRINGS.profile.currentImage;
-  }
-
-  if (profileImageSubmit) {
-    profileImageSubmit.textContent = STRINGS.profile.uploadButton;
-  }
-
-  if (featuredMessageFormTitle) {
-    featuredMessageFormTitle.textContent = STRINGS.admin.featuredMessageTitle;
-  }
-
-  if (featuredMessageInputLabel) {
-    featuredMessageInputLabel.textContent = STRINGS.admin.featuredMessageLabel;
-  }
-
-  if (featuredMessageInput) {
-    featuredMessageInput.placeholder = STRINGS.admin.featuredMessagePlaceholder;
-  }
-
-  if (featuredMessageSubmit) {
-    featuredMessageSubmit.textContent = STRINGS.admin.featuredMessageSave;
-  }
 }
 
 async function initializeVaultExperience() {
-  applyVaultVideoSource(vaultState.videoPath);
-  prepareVaultBackdrop();
-
   vaultState = await loadVaultStatus();
   applyVaultVideoSource(vaultState.videoPath);
   prepareVaultBackdrop();
@@ -348,12 +261,7 @@ async function initializeVaultExperience() {
     showVaultGate();
     setVaultFormEnabled(false);
     setVaultFormVisible(true);
-    setVaultStatusMessage(
-      String(
-        vaultState.message || STRINGS.errors.vaultPasswordMissingHosted
-      ).toUpperCase(),
-      true
-    );
+    setVaultStatusMessage("SET VAULT_PASSWORD IN .ENV.", true);
     return;
   }
 
@@ -407,9 +315,7 @@ async function initialize() {
   initializeTripBrowserEvents();
 
   if (firestoreReady) {
-    subscribeToSiteSettings();
     subscribeToTrips();
-    subscribeToFriends();
   } else {
     showWarning(STRINGS.errors.runtimeConfigMissing);
   }
@@ -421,37 +327,28 @@ async function loadRuntimeConfig() {
   const response = await fetch("/api/config", {
     headers: { Accept: "application/json" },
   });
-  const payload = await readJsonResponse(response);
 
   if (!response.ok) {
-    throw new Error(
-      getApiErrorMessage(
-        payload,
-        "Could not load runtime configuration from /api/config."
-      )
-    );
+    throw new Error("Could not load runtime configuration from /api/config.");
   }
 
-  return payload;
+  return response.json();
 }
 
 async function loadVaultStatus() {
   const response = await fetch("/api/vault/status", {
     headers: { Accept: "application/json" },
   });
-  const payload = await readJsonResponse(response);
 
   if (!response.ok) {
-    throw new Error(
-      getApiErrorMessage(payload, STRINGS.errors.vaultStatusFailed)
-    );
+    throw new Error("Could not load vault status.");
   }
 
+  const status = await response.json();
   return {
-    configured: Boolean(payload?.configured),
-    unlocked: Boolean(payload?.unlocked),
-    videoPath: String(payload?.videoPath || "/assets/vault-intro.mp4"),
-    message: String(payload?.message || ""),
+    configured: Boolean(status?.configured),
+    unlocked: Boolean(status?.unlocked),
+    videoPath: String(status?.videoPath || "/assets/vault-intro.mp4"),
   };
 }
 
@@ -605,12 +502,7 @@ async function handleVaultSubmit(event) {
   event.preventDefault();
 
   if (!vaultState.configured) {
-    setVaultStatusMessage(
-      String(
-        vaultState.message || STRINGS.errors.vaultPasswordMissingHosted
-      ).toUpperCase(),
-      true
-    );
+    setVaultStatusMessage("SET VAULT_PASSWORD IN .ENV.", true);
     return;
   }
 
@@ -635,7 +527,7 @@ async function handleVaultSubmit(event) {
       },
       body: JSON.stringify({ password }),
     });
-    const payload = await readJsonResponse(response);
+    const payload = await readJsonSafely(response);
 
     if (!response.ok) {
       setVaultStatusMessage(getFriendlyVaultMessage(payload), true);
@@ -714,31 +606,11 @@ async function playVaultIntro() {
   vaultIntroPlaying = false;
 }
 
-async function readJsonResponse(response) {
-  const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-  const rawBody = await response.text();
-  const trimmedBody = rawBody.trim();
-
-  if (!trimmedBody) {
-    return {};
-  }
-
-  if (!contentType.includes("application/json")) {
-    if (
-      trimmedBody.startsWith("<!DOCTYPE") ||
-      trimmedBody.startsWith("<html") ||
-      trimmedBody.startsWith("<HTML")
-    ) {
-      throw new Error(STRINGS.errors.apiReturnedHtml);
-    }
-
-    throw new Error(STRINGS.errors.apiReturnedInvalidJson);
-  }
-
+async function readJsonSafely(response) {
   try {
-    return JSON.parse(rawBody);
+    return await response.json();
   } catch {
-    throw new Error(STRINGS.errors.apiReturnedInvalidJson);
+    return {};
   }
 }
 
@@ -756,14 +628,6 @@ function getFriendlyVaultMessage(payload) {
   return String(payload?.message || "VAULT ACCESS FAILED.").toUpperCase();
 }
 
-function getApiErrorMessage(payload, fallbackMessage) {
-  if (payload && typeof payload.message === "string" && payload.message.trim()) {
-    return payload.message;
-  }
-
-  return fallbackMessage;
-}
-
 function initializeFirebaseIfPossible(firebaseConfig) {
   if (!hasFirebaseConfig(firebaseConfig)) {
     return false;
@@ -773,30 +637,6 @@ function initializeFirebaseIfPossible(firebaseConfig) {
   auth = getAuth(firebaseApp);
   db = getFirestore(firebaseApp);
   return true;
-}
-
-function subscribeToSiteSettings() {
-  const siteSettingsRef = getSiteSettingsRef();
-
-  if (!siteSettingsRef) {
-    return;
-  }
-
-  siteSettingsUnsubscribe?.();
-  siteSettingsUnsubscribe = onSnapshot(
-    siteSettingsRef,
-    (snapshot) => {
-      const data = snapshot.exists() ? snapshot.data() : null;
-      featuredMessage = normalizeFeaturedMessage(data?.featuredMessage);
-      renderFeaturedMessage();
-      syncFeaturedMessageForm();
-    },
-    () => {
-      featuredMessage = DEFAULT_FEATURED_MESSAGE;
-      renderFeaturedMessage();
-      syncFeaturedMessageForm();
-    }
-  );
 }
 
 function initializeAuthListener() {
@@ -812,20 +652,20 @@ function initializeAuthListener() {
       try {
         currentUserProfile = await syncUserRecord(user);
         await syncDefaultTripsIfNeeded();
+        subscribeToFriends();
       } catch (error) {
         showWarning(getErrorMessage(error, STRINGS.errors.userSyncFailed));
       }
     } else {
+      usersUnsubscribe?.();
+      usersUnsubscribe = null;
       friendAccessIssue = false;
+      friends = [];
       resetTextPostEditor();
       adminPanelsVisible = false;
       setMobileMenuOpen(false);
-      if (currentRoute === ROUTE_PROFILE) {
-        navigateToRoute(ROUTE_ARCHIVE, { replace: true });
-      }
     }
 
-    syncDefaultAdminMode();
     renderAll();
   });
 }
@@ -845,13 +685,11 @@ function initializeTripBrowserEvents() {
 
 function setupForms() {
   vaultForm?.addEventListener("submit", handleVaultSubmit);
-  featuredMessageForm?.addEventListener("submit", handleFeaturedMessageSubmit);
   tripForm?.addEventListener("submit", handleTripSubmit);
   folderForm?.addEventListener("submit", handleFolderSubmit);
   uploadForm?.addEventListener("submit", handleUploadSubmit);
   textPostForm?.addEventListener("submit", handleTextPostSubmit);
   editPostForm?.addEventListener("submit", handleEditTextPostSubmit);
-  profileImageForm?.addEventListener("submit", handleProfileImageSubmit);
   editPostCloseButton?.addEventListener("click", resetTextPostEditor);
   editPostCancelButton?.addEventListener("click", resetTextPostEditor);
   editPostBackdrop?.addEventListener("click", resetTextPostEditor);
@@ -859,19 +697,14 @@ function setupForms() {
   adminPanelsToggle?.addEventListener("change", handleAdminPanelsToggleChange);
   mobileMenuToggle?.addEventListener("click", handleMobileMenuToggleClick);
   mobileMenuBackdrop?.addEventListener("click", () => setMobileMenuOpen(false));
-  desktopRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
-  mobileRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
   uploadTripSelect?.addEventListener("change", renderAdminSelects);
   textTripSelect?.addEventListener("change", renderAdminSelects);
   friendsDesktopList?.addEventListener("change", handleRoleSelectChange);
   friendsMobileList?.addEventListener("change", handleRoleSelectChange);
-  friendsMobileInlineList?.addEventListener("change", handleRoleSelectChange);
   friendsDesktopList?.addEventListener("click", handleProfileActionClick);
   friendsMobileList?.addEventListener("click", handleProfileActionClick);
-  friendsMobileInlineList?.addEventListener("click", handleProfileActionClick);
   window.addEventListener("resize", syncResponsivePanels);
   window.addEventListener("keydown", handleWindowKeydown);
-  window.addEventListener("popstate", handleWindowPopstate);
   syncResponsivePanels();
 }
 
@@ -896,12 +729,7 @@ function handleWindowKeydown(event) {
 
 function syncResponsivePanels() {
   const mobileViewport = window.innerWidth < 1280;
-  const authTargetSlot = mobileViewport ? mobileAccessPanelSlot : desktopAccessPanelSlot;
   const targetSlot = mobileViewport ? mobileAdminPanelSlot : desktopControlPanelSlot;
-
-  if (authPanel && authTargetSlot && authPanel.parentElement !== authTargetSlot) {
-    authTargetSlot.appendChild(authPanel);
-  }
 
   if (adminPanel && targetSlot && adminPanel.parentElement !== targetSlot) {
     targetSlot.appendChild(adminPanel);
@@ -910,18 +738,6 @@ function syncResponsivePanels() {
   if (!mobileViewport) {
     setMobileMenuOpen(false);
   }
-}
-
-function getSettingsCollectionName() {
-  return runtimeConfig?.collections?.settings || "settings";
-}
-
-function getSiteSettingsRef() {
-  if (!db) {
-    return null;
-  }
-
-  return doc(db, getSettingsCollectionName(), FEATURED_MESSAGE_DOC_ID);
 }
 
 function setMobileMenuOpen(nextOpen) {
@@ -939,33 +755,6 @@ function setMobileMenuOpen(nextOpen) {
   if (mobileMenuToggle) {
     mobileMenuToggle.setAttribute("aria-expanded", String(mobileMenuOpen));
   }
-}
-
-function handleWindowPopstate() {
-  currentRoute = normalizeRoute(window.location.pathname);
-  renderAll();
-}
-
-function handleRouteToggleClick() {
-  navigateToRoute(currentRoute === ROUTE_PROFILE ? ROUTE_ARCHIVE : ROUTE_PROFILE);
-}
-
-function normalizeRoute(pathname) {
-  return pathname === "/profile" ? ROUTE_PROFILE : ROUTE_ARCHIVE;
-}
-
-function navigateToRoute(route, options = {}) {
-  const normalizedRoute = route === ROUTE_PROFILE ? ROUTE_PROFILE : ROUTE_ARCHIVE;
-  const targetPath = normalizedRoute === ROUTE_PROFILE ? "/profile" : "/";
-
-  if (window.location.pathname !== targetPath) {
-    const method = options.replace ? "replaceState" : "pushState";
-    window.history[method]({}, "", targetPath);
-  }
-
-  currentRoute = normalizedRoute;
-  setMobileMenuOpen(false);
-  renderAll();
 }
 
 function setEditPostModalOpen(nextOpen) {
@@ -986,24 +775,12 @@ function syncAdminPanelsToggle() {
 
   if (adminPanelsControl) {
     adminPanelsControl.classList.toggle("hidden", !shouldShow);
-    adminPanelsControl.classList.toggle("xl:flex", shouldShow);
+    adminPanelsControl.classList.toggle("flex", shouldShow);
   }
 
   if (adminPanelsToggle) {
     adminPanelsToggle.checked = shouldShow && adminPanelsVisible;
   }
-}
-
-function syncDefaultAdminMode() {
-  if (isAdmin()) {
-    adminPanelsVisible = true;
-    if (adminPanelsToggle) {
-      adminPanelsToggle.checked = true;
-    }
-    return;
-  }
-
-  adminPanelsVisible = false;
 }
 
 function setAdminPanelsVisible(visible) {
@@ -1040,102 +817,6 @@ async function handleSignOut() {
     }
   } catch (error) {
     authDetail.textContent = getErrorMessage(error, STRINGS.errors.signOutFailed);
-  }
-}
-
-async function handleProfileImageSubmit(event) {
-  event.preventDefault();
-
-  if (!currentUser?.uid || !db || !storage || !storageReady) {
-    authDetail.textContent = STRINGS.profile.signInRequired;
-    return;
-  }
-
-  const file = profileImageInput?.files?.[0];
-
-  if (!file) {
-    return;
-  }
-
-  if (!isSupportedProfileImage(file)) {
-    authDetail.textContent = STRINGS.firebase.profileImageType;
-    return;
-  }
-
-  if (Number(file.size || 0) > MAX_PROFILE_IMAGE_SIZE_BYTES) {
-    authDetail.textContent = STRINGS.firebase.profileImageSize;
-    return;
-  }
-
-  const extension = getFileExtension(file.name) || "jpg";
-  const storagePath = `profiles/${currentUser.uid}/profile-${buildUniqueStamp()}.${extension}`;
-  const nextImageRef = storageRef(storage, storagePath);
-
-  profileImageSubmit?.toggleAttribute("disabled", true);
-  authDetail.textContent = STRINGS.profile.uploading;
-
-  try {
-    const task = uploadBytesResumable(nextImageRef, file, {
-      contentType: file.type || "image/jpeg",
-    });
-
-    await new Promise((resolve, reject) => {
-      task.on("state_changed", undefined, reject, resolve);
-    });
-
-    const downloadURL = await getDownloadURL(task.snapshot.ref);
-    const previousPath = String(currentUserProfile?.photoStoragePath || "");
-
-    await setDoc(
-      doc(db, runtimeConfig.collections.users, currentUser.uid),
-      {
-        uid: currentUser.uid,
-        email: currentUser.email || "",
-        displayName:
-          String(currentUserProfile?.displayName || "").trim() ||
-          String(currentUser.displayName || "").trim() ||
-          inferNameFromEmail(currentUser.email),
-        photoURL: downloadURL,
-        photoStoragePath: storagePath,
-        role: getCurrentUserRole(),
-        isAdmin: isElevatedRole(getCurrentUserRole()),
-        updatedAt: serverTimestamp(),
-        updatedByUid: currentUser.uid,
-        updatedByEmail: currentUser.email || "",
-      },
-      { merge: true }
-    );
-
-    if (previousPath && previousPath !== storagePath) {
-      try {
-        await deleteObject(storageRef(storage, previousPath));
-      } catch (error) {
-        if (!isStorageObjectMissing(error)) {
-          throw error;
-        }
-      }
-    }
-
-    currentUserProfile = normalizeFriend({
-      ...(currentUserProfile || {}),
-      uid: currentUser.uid,
-      email: currentUser.email || "",
-      displayName:
-        String(currentUserProfile?.displayName || "").trim() ||
-        String(currentUser.displayName || "").trim() ||
-        inferNameFromEmail(currentUser.email),
-      photoURL: downloadURL,
-      photoStoragePath: storagePath,
-      role: getCurrentUserRole(),
-    });
-
-    profileImageForm?.reset();
-    authDetail.textContent = STRINGS.profile.uploadDone;
-    renderAll();
-  } catch (error) {
-    authDetail.textContent = getFriendlyStorageMessage(error);
-  } finally {
-    profileImageSubmit?.toggleAttribute("disabled", false);
   }
 }
 
@@ -1190,7 +871,7 @@ function subscribeToTrips() {
 }
 
 function subscribeToFriends() {
-  if (!db || !runtimeConfig?.collections?.users) {
+  if (!db || !runtimeConfig?.collections?.users || !currentUser) {
     return;
   }
 
@@ -1392,16 +1073,11 @@ async function syncUserRecord(user) {
   const userSnapshot = await getDoc(userRef);
   const existingData = userSnapshot.exists() ? userSnapshot.data() : null;
   const role = resolveStoredUserRole(existingData?.role, user.email);
-  const displayName =
-    String(existingData?.displayName || "").trim() ||
-    String(user.displayName || "").trim() ||
-    inferNameFromEmail(user.email);
   const payload = {
     uid: user.uid,
     email: user.email || "",
-    displayName,
-    photoURL: String(existingData?.photoStoragePath ? existingData?.photoURL || "" : ""),
-    photoStoragePath: String(existingData?.photoStoragePath || ""),
+    displayName: user.displayName || "",
+    photoURL: user.photoURL || "",
     role,
     isAdmin: isElevatedRole(role),
     lastLoginAt: serverTimestamp(),
@@ -1419,9 +1095,8 @@ async function syncUserRecord(user) {
     ...existingData,
     uid: user.uid,
     email: user.email || "",
-    displayName,
-    photoURL: String(existingData?.photoStoragePath ? existingData?.photoURL || "" : ""),
-    photoStoragePath: String(existingData?.photoStoragePath || ""),
+    displayName: user.displayName || "",
+    photoURL: user.photoURL || "",
     role,
   });
 }
@@ -1468,50 +1143,6 @@ async function handleTripSubmit(event) {
     event.currentTarget.reset();
   } catch (error) {
     authDetail.textContent = getErrorMessage(error, STRINGS.errors.tripCreateFailed);
-  }
-}
-
-async function handleFeaturedMessageSubmit(event) {
-  event.preventDefault();
-
-  if (!db || !isAdminViewEnabled()) {
-    return;
-  }
-
-  const siteSettingsRef = getSiteSettingsRef();
-
-  if (!siteSettingsRef) {
-    return;
-  }
-
-  const formData = new FormData(event.currentTarget);
-  const nextMessage = normalizeFeaturedMessage(formData.get("featuredMessage"));
-
-  featuredMessageSubmit?.toggleAttribute("disabled", true);
-
-  try {
-    await setDoc(
-      siteSettingsRef,
-      {
-        featuredMessage: nextMessage,
-        updatedAt: serverTimestamp(),
-        updatedByUid: currentUser?.uid || "",
-        updatedByEmail: currentUser?.email || "",
-      },
-      { merge: true }
-    );
-
-    featuredMessage = nextMessage;
-    renderFeaturedMessage();
-    syncFeaturedMessageForm();
-    authDetail.textContent = STRINGS.admin.featuredMessageSaved;
-  } catch (error) {
-    authDetail.textContent = getErrorMessage(
-      error,
-      STRINGS.errors.featuredMessageFailed
-    );
-  } finally {
-    featuredMessageSubmit?.toggleAttribute("disabled", false);
   }
 }
 
@@ -1827,10 +1458,6 @@ function isSupportedMediaFile(file) {
   return isVideoFile(file) || isImageFile(file);
 }
 
-function isSupportedProfileImage(file) {
-  return isImageFile(file) && ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(String(file?.type || "").toLowerCase());
-}
-
 function isVideoFile(file) {
   return String(file?.type || "").startsWith("video/");
 }
@@ -1861,11 +1488,6 @@ function getUploadAuthorLabel() {
     String(currentUser?.email || "").split("@")[0] ||
     STRINGS.members.unknown
   );
-}
-
-function getFriendPhotoUrl(friend) {
-  const url = String(friend?.photoURL || "").trim();
-  return url || DEFAULT_PROFILE_IMAGE_URL;
 }
 
 function resolveItemAuthorLabel(item) {
@@ -2068,13 +1690,8 @@ async function handleRoleSelectChange(event) {
     return;
   }
 
-  if (friend.uid === currentUser?.uid && nextRole !== friend.role) {
-    select.value = friend.role;
-    authDetail.textContent = STRINGS.members.selfRoleLocked;
-    return;
-  }
-
-  const roleToStore = isAdminEmail(friend.email) ? ROLE_ADMIN : nextRole;
+  const lockedOwner = isAdminEmail(friend.email);
+  const roleToStore = lockedOwner ? ROLE_OWNER : nextRole;
 
   select.disabled = true;
 
@@ -2085,8 +1702,7 @@ async function handleRoleSelectChange(event) {
         uid: friend.uid || userId,
         email: friend.email,
         displayName: friend.displayName || "",
-        photoURL: friend.photoStoragePath ? friend.photoURL || "" : "",
-        photoStoragePath: friend.photoStoragePath || "",
+        photoURL: friend.photoURL || "",
         role: roleToStore,
         isAdmin: isElevatedRole(roleToStore),
         updatedAt: serverTimestamp(),
@@ -2485,14 +2101,10 @@ async function handleProfileDeleteClick(trigger) {
 
 function renderAll() {
   syncResponsivePanels();
-  renderFeaturedMessage();
   renderAuth();
-  renderCurrentPage();
   renderTripCount();
   renderTrips();
-  renderProfilePage();
   renderAdminSelects();
-  syncFeaturedMessageForm();
   renderUploadQueue();
   renderFriendsPanel();
 }
@@ -2501,23 +2113,8 @@ function renderAuth() {
   const signedIn = Boolean(currentUser?.email);
   syncAdminPanelsToggle();
 
-  if (desktopRouteToggleLink) {
-    desktopRouteToggleLink.textContent =
-      currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
-    desktopRouteToggleLink.classList.toggle("hidden", !signedIn);
-    desktopRouteToggleLink.classList.toggle("xl:inline-flex", signedIn);
-  }
-
-  if (mobileRouteToggleLink) {
-    mobileRouteToggleLink.textContent =
-      currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
-    mobileRouteToggleLink.classList.toggle("hidden", !signedIn);
-  }
-
-  mobileMenuToggle?.classList.remove("hidden");
-
   if (!runtimeConfig) {
-    authStatus.textContent = STRINGS.auth.civilianView;
+    authStatus.textContent = STRINGS.auth.publicView;
     authDetail.textContent = STRINGS.auth.loading;
     signOutButton?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
@@ -2526,7 +2123,7 @@ function renderAuth() {
   }
 
   if (!firestoreReady) {
-    authStatus.textContent = STRINGS.auth.civilianView;
+    authStatus.textContent = STRINGS.auth.publicView;
     authDetail.textContent = STRINGS.auth.configMissing;
     signOutButton?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
@@ -2535,7 +2132,7 @@ function renderAuth() {
   }
 
   if (!signedIn) {
-    authStatus.textContent = STRINGS.auth.civilianView;
+    authStatus.textContent = STRINGS.auth.publicView;
     authDetail.textContent = firestoreAccessIssue ? STRINGS.auth.rulesBlocked : "";
     signOutButton?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
@@ -2547,7 +2144,9 @@ function renderAuth() {
   setGoogleButtonVisible(false);
 
   if (isAdmin()) {
-    authStatus.textContent = STRINGS.auth.adminView;
+    authStatus.textContent = isAdminViewEnabled()
+      ? STRINGS.auth.adminView
+      : STRINGS.auth.memberView;
     authDetail.textContent = currentUser.email;
     adminPanel?.classList.remove("hidden");
   } else {
@@ -2559,13 +2158,6 @@ function renderAuth() {
   }
 
   syncControlPanelVisibility();
-}
-
-function renderCurrentPage() {
-  const showProfile = currentRoute === ROUTE_PROFILE && Boolean(currentUser?.uid);
-
-  archivePage?.classList.toggle("hidden", showProfile);
-  profilePage?.classList.toggle("hidden", !showProfile);
 }
 
 function renderTripCount() {
@@ -2580,8 +2172,7 @@ function syncControlPanelVisibility() {
   const signedIn = canUploadMedia();
   const adminMode = signedIn && isAdminViewEnabled();
 
-  adminPanel?.classList.toggle("hidden", !signedIn || currentRoute !== ROUTE_ARCHIVE);
-  featuredMessageForm?.classList.toggle("hidden", !adminMode);
+  adminPanel?.classList.toggle("hidden", !signedIn);
   tripForm?.classList.toggle("hidden", !adminMode);
   folderForm?.classList.toggle("hidden", !adminMode);
   textPostForm?.classList.toggle("hidden", !signedIn);
@@ -2590,34 +2181,6 @@ function syncControlPanelVisibility() {
     controlPanelTitle.textContent = adminMode
       ? STRINGS.admin.title
       : STRINGS.uploads.panelTitle;
-  }
-}
-
-function renderProfilePage() {
-  const signedIn = Boolean(currentUser?.uid);
-
-  if (profileImagePreview) {
-    profileImagePreview.src = getFriendPhotoUrl(currentUserProfile);
-  }
-
-  if (profileNameDisplay) {
-    profileNameDisplay.textContent = signedIn
-      ? sanitizeUpper(getFriendLabel(currentUserProfile || normalizeFriend({
-          uid: currentUser?.uid || "",
-          email: currentUser?.email || "",
-          displayName: currentUser?.displayName || "",
-          photoURL: "",
-          role: getCurrentUserRole(),
-        })))
-      : STRINGS.profile.signInRequired;
-  }
-
-  if (profileEmailDisplay) {
-    profileEmailDisplay.textContent = signedIn ? String(currentUser?.email || "") : "";
-  }
-
-  if (profileImageForm) {
-    profileImageForm.classList.toggle("hidden", !signedIn);
   }
 }
 
@@ -2667,55 +2230,53 @@ function renderTrips() {
                 trip.label
               )}</p>
             </div>
-            <div class="max-w-full overflow-x-auto">
-              <div class="flex w-max items-center gap-3 pr-1">
-                <button
-                  type="button"
-                  data-action="toggle-trip"
-                  data-trip-id="${escapeHtml(trip.id)}"
-                  aria-expanded="${expanded ? "true" : "false"}"
-                  class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
-                >
-                  ${tripToggleLabel}
-                </button>
-                <div class="shrink-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.2em] text-stone-300/60">
-                  ${padCount(folders.length, STRINGS.trips.foldersLabel)}
-                </div>
-                ${
-                  adminMode
-                    ? `
-                      <button
-                        type="button"
-                        data-action="move-trip"
-                        data-direction="up"
-                        data-trip-id="${escapeHtml(trip.id)}"
-                        class="shrink-0 border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
-                        ${index === 0 ? "disabled" : ""}
-                      >
-                        ${STRINGS.trips.moveTripUp}
-                      </button>
-                      <button
-                        type="button"
-                        data-action="move-trip"
-                        data-direction="down"
-                        data-trip-id="${escapeHtml(trip.id)}"
-                        class="shrink-0 border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
-                        ${index === trips.length - 1 ? "disabled" : ""}
-                      >
-                        ${STRINGS.trips.moveTripDown}
-                      </button>
-                      <button
-                        type="button"
-                        data-action="delete-trip"
-                        data-trip-id="${escapeHtml(trip.id)}"
-                        class="shrink-0 border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
-                      >
-                        ${STRINGS.trips.deleteTrip}
-                      </button>
-                    `
-                    : ""
-                }
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                data-action="toggle-trip"
+                data-trip-id="${escapeHtml(trip.id)}"
+                aria-expanded="${expanded ? "true" : "false"}"
+                class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
+              >
+                ${tripToggleLabel}
+              </button>
+              <div class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.2em] text-stone-300/60">
+                ${padCount(folders.length, STRINGS.trips.foldersLabel)}
               </div>
+              ${
+                adminMode
+                  ? `
+                    <button
+                      type="button"
+                      data-action="move-trip"
+                      data-direction="up"
+                      data-trip-id="${escapeHtml(trip.id)}"
+                      class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
+                      ${index === 0 ? "disabled" : ""}
+                    >
+                      ${STRINGS.trips.moveTripUp}
+                    </button>
+                    <button
+                      type="button"
+                      data-action="move-trip"
+                      data-direction="down"
+                      data-trip-id="${escapeHtml(trip.id)}"
+                      class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
+                      ${index === trips.length - 1 ? "disabled" : ""}
+                    >
+                      ${STRINGS.trips.moveTripDown}
+                    </button>
+                    <button
+                      type="button"
+                      data-action="delete-trip"
+                      data-trip-id="${escapeHtml(trip.id)}"
+                      class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
+                    >
+                      ${STRINGS.trips.deleteTrip}
+                    </button>
+                  `
+                  : ""
+              }
             </div>
           </div>
 
@@ -2750,13 +2311,13 @@ function renderTrips() {
             </aside>
 
             <div class="min-w-0 border border-white/10 bg-black/25 p-4">
-              <div class="flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-                <div class="min-w-0 sm:self-center">
-                  <p class="text-xl font-bold leading-none tracking-[0.08em] text-stone-100">${escapeHtml(
+              <div class="flex flex-col gap-2 border-b border-white/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p class="text-xl font-bold tracking-[0.08em] text-stone-100">${escapeHtml(
                     pathLabel
                   )}</p>
                 </div>
-                <div class="flex flex-col gap-3 sm:self-center sm:items-end">
+                <div class="flex flex-col gap-3 sm:items-end">
                   <label class="flex items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-300/62">
                     <span>${STRINGS.items.sortLabel}</span>
                     <select
@@ -3015,10 +2576,6 @@ function renderFriendsPanel() {
     friendsMobileCount.textContent = countLabel;
   }
 
-  if (friendsMobileInlineCount) {
-    friendsMobileInlineCount.textContent = countLabel;
-  }
-
   if (friendsDesktopStatus) {
     friendsDesktopStatus.textContent = statusText;
     friendsDesktopStatus.classList.toggle("hidden", !statusText);
@@ -3029,12 +2586,13 @@ function renderFriendsPanel() {
     friendsMobileStatus.classList.toggle("hidden", !statusText);
   }
 
-  if (friendsMobileInlineStatus) {
-    friendsMobileInlineStatus.textContent = statusText;
-    friendsMobileInlineStatus.classList.toggle("hidden", !statusText);
-  }
-
-  const markup = visibleMembers.length === 0
+  const markup = !signedIn
+    ? `
+      <div class="border border-white/10 bg-black/20 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.18em] text-stone-300/55">
+        ${STRINGS.members.guestPrompt}
+      </div>
+    `
+    : visibleMembers.length === 0
       ? `
         <div class="border border-white/10 bg-black/20 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.18em] text-stone-300/55">
           ${STRINGS.members.empty}
@@ -3048,14 +2606,6 @@ function renderFriendsPanel() {
 
   if (friendsMobileList) {
     friendsMobileList.innerHTML = markup;
-  }
-
-  if (friendsMobileInlineList) {
-    friendsMobileInlineList.innerHTML = markup;
-  }
-
-  if (friendsMobileInlineShell) {
-    friendsMobileInlineShell.classList.toggle("hidden", signedIn);
   }
 }
 
@@ -3386,8 +2936,7 @@ function normalizeFriend(user) {
     uid: String(user?.uid || ""),
     email,
     displayName: name,
-    photoURL: String(user?.photoStoragePath ? user?.photoURL || "" : ""),
-    photoStoragePath: String(user?.photoStoragePath || ""),
+    photoURL: String(user?.photoURL || ""),
     role,
     isAdmin: isElevatedRole(role),
   };
@@ -3414,7 +2963,6 @@ function renderFriendCard(friend) {
   return `
     <article class="border border-white/10 bg-black/20 px-3 py-3">
       <div class="flex items-center gap-3">
-        <img src="${escapeHtml(getFriendPhotoUrl(friend))}" alt="${escapeHtml(label)}" class="h-12 w-12 shrink-0 border border-white/10 bg-black object-cover object-center">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
             <p class="truncate text-sm uppercase tracking-[0.14em] text-stone-100">${escapeHtml(label)}</p>
@@ -3450,7 +2998,7 @@ function renderFriendControls(friend, canDeleteProfile) {
 }
 
 function renderRoleSelect(friend) {
-  const roleLocked = Boolean(friend.uid && friend.uid === currentUser?.uid);
+  const lockedOwner = isAdminEmail(friend.email);
   const options = getAssignableRoles(friend).map((role) => {
     const selected = role === friend.role ? "selected" : "";
     return `<option value="${escapeHtml(role)}" ${selected}>${escapeHtml(
@@ -3462,8 +3010,8 @@ function renderRoleSelect(friend) {
     <select
       data-action="role-select"
       data-user-id="${escapeHtml(friend.uid || friend.id)}"
-      ${roleLocked ? "disabled" : ""}
       class="border border-white/10 bg-black/40 px-2 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 outline-none transition focus:border-white/30"
+      ${lockedOwner ? "disabled" : ""}
     >
       ${options.join("")}
     </select>
@@ -3489,6 +3037,10 @@ function getRoleLabel(role) {
 
   if (role === ROLE_ADMIN) {
     return STRINGS.members.role.admin;
+  }
+
+  if (role === ROLE_OWNER) {
+    return STRINGS.members.role.owner;
   }
 
   return STRINGS.members.role.friend;
@@ -3521,7 +3073,7 @@ function isAdminEmail(email) {
 
 function getCurrentUserRole() {
   if (!currentUser?.uid) {
-    return isAdminEmail(currentUser?.email) ? ROLE_ADMIN : ROLE_FRIEND;
+    return isAdminEmail(currentUser?.email) ? ROLE_OWNER : ROLE_FRIEND;
   }
 
   const currentFriend = friends.find((friend) => friend.uid === currentUser.uid);
@@ -3529,12 +3081,16 @@ function getCurrentUserRole() {
 }
 
 function getAssignableRoles(friend) {
+  if (isAdminEmail(friend.email)) {
+    return [ROLE_OWNER];
+  }
+
   return [ROLE_FRIEND, ROLE_ADMIN];
 }
 
 function resolveStoredUserRole(role, email) {
   if (isAdminEmail(email)) {
-    return ROLE_ADMIN;
+    return ROLE_OWNER;
   }
 
   return normalizeUserRole(role) === ROLE_ADMIN ? ROLE_ADMIN : ROLE_FRIEND;
@@ -3542,13 +3098,13 @@ function resolveStoredUserRole(role, email) {
 
 function normalizeUserRole(role) {
   const value = String(role || "").trim().toLowerCase();
-  return [ROLE_FRIEND, ROLE_ADMIN].includes(value)
+  return [ROLE_FRIEND, ROLE_ADMIN, ROLE_OWNER].includes(value)
     ? value
     : ROLE_FRIEND;
 }
 
 function isElevatedRole(role) {
-  return role === ROLE_ADMIN;
+  return role === ROLE_ADMIN || role === ROLE_OWNER;
 }
 
 function getVisibleMembers() {
@@ -3738,32 +3294,12 @@ function inferNameFromEmail(email) {
     .join(" ");
 }
 
-function renderFeaturedMessage() {
+function startLoadingAnimation() {
   if (!loadingText) {
     return;
   }
 
-  loadingText.textContent = `> ${normalizeFeaturedMessage(featuredMessage)}`;
-}
-
-function syncFeaturedMessageForm() {
-  const adminMode = isAdminViewEnabled();
-
-  featuredMessageInput?.toggleAttribute("disabled", !adminMode);
-  featuredMessageSubmit?.toggleAttribute("disabled", !adminMode);
-
-  if (featuredMessageInput && document.activeElement !== featuredMessageInput) {
-    featuredMessageInput.value = normalizeFeaturedMessage(featuredMessage);
-  }
-}
-
-function normalizeFeaturedMessage(value) {
-  const normalized = String(value || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 180);
-
-  return normalized || DEFAULT_FEATURED_MESSAGE;
+    loadingText.textContent = "LOADING...";
 }
 
 function startLogoPulse() {
