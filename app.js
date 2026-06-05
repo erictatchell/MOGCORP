@@ -38,18 +38,16 @@ const DEFAULT_TRIPS = [
     label: "MONTREAL 25",
     slug: "mtl-25",
     sortOrder: 0,
-    folders: ["root", "thu", "fri", "sat", "sun", "mon", "movie"],
+    folders: ["thu", "fri", "sat", "sun", "mon", "movie"],
   },
   {
     id: "vic-24",
     label: "VICTORIA 24",
     slug: "vic-24",
     sortOrder: 1,
-    folders: ["root"],
+    folders: [],
   },
 ];
-const ROOT_FOLDER_ID = "root";
-const ROOT_FOLDER_SORT = -1;
 
 const siteShell = document.getElementById("site-shell");
 const vaultGate = document.getElementById("vault-gate");
@@ -977,6 +975,7 @@ function syncFolderSubscriptions() {
 
         if (folders.length === 0) {
           foldersByTrip.set(trip.id, seedFolderDefaultsForTripState(trip));
+          selectedFolders.delete(trip.id);
           renderAll();
           await ensureTripFolders(trip);
           return;
@@ -989,8 +988,8 @@ function syncFolderSubscriptions() {
           selectedFolders.set(trip.id, folders[0].id);
         }
 
+        await loadAllFolderItemsForTrip(trip.id, folders);
         renderAll();
-        loadSelectedFolderItems(trip.id);
       },
       (error) => {
         showWarning(getFriendlyFirestoreMessage(error));
@@ -1007,6 +1006,10 @@ function pruneItemsForTrip(tripId) {
       itemsByFolder.delete(key);
     }
   });
+}
+
+function pruneItemsForFolder(tripId, folderId) {
+  itemsByFolder.delete(buildFolderCacheKey(tripId, folderId));
 }
 
 async function ensureDefaultTrips() {
@@ -1047,9 +1050,9 @@ async function ensureTripFolders(trip) {
     return;
   }
 
-  const folders = trip.folders && trip.folders.length > 0 ? trip.folders : [ROOT_FOLDER_ID];
+  const folders = trip.folders && trip.folders.length > 0 ? trip.folders : [];
   const folderPromises = folders.map((folderSlug, index) => {
-    const normalizedSlug = folderSlug === ROOT_FOLDER_ID ? ROOT_FOLDER_ID : slugifyFolder(folderSlug);
+    const normalizedSlug = slugifyFolder(folderSlug);
     return setDoc(
       doc(
         db,
@@ -1059,10 +1062,10 @@ async function ensureTripFolders(trip) {
         normalizedSlug
       ),
       {
-        label: normalizedSlug === ROOT_FOLDER_ID ? trip.slug : normalizedSlug,
+        label: normalizedSlug,
         slug: normalizedSlug,
-        kind: normalizedSlug === ROOT_FOLDER_ID ? "root" : classifyFolderKind(normalizedSlug),
-        sortOrder: normalizedSlug === ROOT_FOLDER_ID ? ROOT_FOLDER_SORT : index,
+        kind: classifyFolderKind(normalizedSlug),
+        sortOrder: index,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       },
@@ -1080,25 +1083,8 @@ async function loadSelectedFolderItems(tripId) {
     return;
   }
 
-  const cacheKey = buildFolderCacheKey(tripId, folderId);
-  const itemsQuery = query(
-    collection(
-      db,
-      runtimeConfig.collections.trips,
-      tripId,
-      "folders",
-      folderId,
-      "items"
-    ),
-    orderBy("createdAt", "desc")
-  );
-
   try {
-    const snapshot = await getDocs(itemsQuery);
-    const items = snapshot.docs.map((itemDoc) =>
-      normalizeItem({ id: itemDoc.id, ...itemDoc.data() })
-    );
-    itemsByFolder.set(cacheKey, items);
+    await loadFolderItems(tripId, folderId);
     renderTrips();
   } catch (error) {
     showWarning(getFriendlyFirestoreMessage(error));
@@ -1178,7 +1164,7 @@ async function handleTripSubmit(event) {
     await ensureTripFolders({
       id: slug,
       slug,
-      folders: [ROOT_FOLDER_ID, ...folderSeeds],
+      folders: folderSeeds,
     });
 
     event.currentTarget.reset();
@@ -1199,7 +1185,7 @@ async function handleFolderSubmit(event) {
   const folderSlug = slugifyFolder(formData.get("folderLabel"));
   const trip = trips.find((item) => item.id === tripId);
 
-  if (!trip || !folderSlug || folderSlug === ROOT_FOLDER_ID) {
+  if (!trip || !folderSlug) {
     return;
   }
 
@@ -1294,10 +1280,7 @@ async function handleUploadSubmit(event) {
 
 async function uploadMediaFile(trip, folder, file, index, description = "") {
   const generatedName = buildStorageFileName(file, index);
-  const storagePath =
-    folder.id === ROOT_FOLDER_ID
-      ? `trips/${trip.slug}/${generatedName}`
-      : `trips/${trip.slug}/${folder.slug}/${generatedName}`;
+  const storagePath = `trips/${trip.slug}/${folder.slug}/${generatedName}`;
   const ref = storageRef(storage, storagePath);
   const jobId = `${Date.now()}-${index}-${generatedName}`;
 
@@ -1786,7 +1769,7 @@ function getFolderVideoItems(tripId, folderId) {
 function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()) {
   if (videoPreviewTitle) {
     videoPreviewTitle.textContent = previewState
-      ? getItemDisplayName(previewState.currentItem)
+      ? `CLIP PREVIEW // ${getItemDisplayName(previewState.currentItem)} // ${previewState.currentIndex + 1}/${previewState.items.length}`
       : "";
   }
 
@@ -1891,6 +1874,13 @@ function handleTripBrowserClick(event) {
 
   if (tripDeleteTrigger) {
     handleTripDeleteClick(tripDeleteTrigger);
+    return;
+  }
+
+  const folderDeleteTrigger = event.target.closest("[data-action='delete-folder']");
+
+  if (folderDeleteTrigger) {
+    handleFolderDeleteClick(folderDeleteTrigger);
     return;
   }
 
@@ -2069,6 +2059,63 @@ async function handleTripDeleteClick(trigger) {
   }
 }
 
+async function handleFolderDeleteClick(trigger) {
+  if (!db || !isAdminViewEnabled()) {
+    return;
+  }
+
+  const tripId = String(trigger.getAttribute("data-trip-id") || "");
+  const folderId = String(trigger.getAttribute("data-folder-id") || "");
+  const trip = trips.find((entry) => entry.id === tripId);
+  const folder = getFoldersForTrip(tripId).find((entry) => entry.id === folderId);
+
+  if (!trip || !folder) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete ${trip.slug}/${folder.slug}/ and all posts, clips, and storage files?`
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  trigger.disabled = true;
+
+  try {
+    await deleteFolderCascade(trip, folder);
+
+    const remainingFolders = getFoldersForTrip(tripId).filter((entry) => entry.id !== folderId);
+    foldersByTrip.set(tripId, remainingFolders);
+
+    if (selectedFolders.get(tripId) === folderId) {
+      if (remainingFolders[0]) {
+        selectedFolders.set(tripId, remainingFolders[0].id);
+      } else {
+        selectedFolders.delete(tripId);
+      }
+    }
+
+    if (currentTextPostEdit?.tripId === tripId && currentTextPostEdit.folderId === folderId) {
+      resetTextPostEditor();
+    }
+
+    if (
+      currentVideoPreviewContext?.tripId === tripId &&
+      currentVideoPreviewContext.folderId === folderId
+    ) {
+      resetVideoPreview();
+    }
+
+    pruneItemsForFolder(tripId, folderId);
+    renderAll();
+    authDetail.textContent = STRINGS.trips.removed(folder.slug);
+  } catch (error) {
+    authDetail.textContent = getErrorMessage(error, "Could not delete folder.");
+    trigger.disabled = false;
+  }
+}
+
 async function deleteTripCascade(trip) {
   if (storage) {
     await deleteStoragePrefix(storageRef(storage, `trips/${trip.slug}`));
@@ -2131,6 +2178,53 @@ async function deleteTripCascade(trip) {
   foldersByTrip.delete(trip.id);
   selectedFolders.delete(trip.id);
   pruneItemsForTrip(trip.id);
+}
+
+async function deleteFolderCascade(trip, folder) {
+  const itemsSnapshot = await getDocs(
+    collection(
+      db,
+      runtimeConfig.collections.trips,
+      trip.id,
+      "folders",
+      folder.id,
+      "items"
+    )
+  );
+
+  for (const itemDoc of itemsSnapshot.docs) {
+    const item = normalizeItem({ id: itemDoc.id, ...itemDoc.data() });
+
+    if (item.kind === "file" && item.storagePath) {
+      if (!storage) {
+        throw new Error("Storage is not ready for folder deletion.");
+      }
+
+      try {
+        await deleteObject(storageRef(storage, item.storagePath));
+      } catch (error) {
+        if (!isStorageObjectMissing(error)) {
+          throw error;
+        }
+      }
+
+      if (item.posterStoragePath) {
+        try {
+          await deleteObject(storageRef(storage, item.posterStoragePath));
+        } catch (error) {
+          if (!isStorageObjectMissing(error)) {
+            throw error;
+          }
+        }
+      }
+    }
+
+    await deleteDoc(itemDoc.ref);
+  }
+
+  await deleteDoc(
+    doc(db, runtimeConfig.collections.trips, trip.id, "folders", folder.id)
+  );
 }
 
 function isDefaultTripId(tripId) {
@@ -2372,7 +2466,7 @@ function renderTrips() {
       const folders = getFoldersForTrip(trip.id);
       const selectedFolderId = getSelectedFolderId(trip.id);
       const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) || folders[0];
-      const activeFolderId = selectedFolder?.id || ROOT_FOLDER_ID;
+      const activeFolderId = selectedFolder?.id || "";
       const sortMode = getItemSortMode(trip.id, activeFolderId);
       const items = getSortedItemsForFolder(trip.id, activeFolderId, sortMode);
       const pathLabel = buildFolderPathLabel(trip, selectedFolder);
@@ -2454,6 +2548,7 @@ function renderTrips() {
                 ${folders
                   .map((folder) => {
                     const isSelected = folder.id === selectedFolderId;
+                    const folderItemCount = getItemsForFolder(trip.id, folder.id).length;
                     return `
                       <button
                         type="button"
@@ -2467,7 +2562,10 @@ function renderTrips() {
                         }"
                       >
                         <span>${escapeHtml(buildFolderButtonLabel(trip, folder))}</span>
-                        <span>${escapeHtml(folder.kind)}</span>
+                        <span class="flex items-center gap-2">
+                          <span>${escapeHtml(folder.kind)}</span>
+                          <span class="text-stone-400/55">${escapeHtml(String(folderItemCount))}</span>
+                        </span>
                       </button>
                     `;
                   })
@@ -2483,16 +2581,33 @@ function renderTrips() {
                   )}</p>
                 </div>
                 <div class="flex flex-col gap-3 sm:items-end">
-                  <label class="flex items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-300/62">
-                    <span>${STRINGS.items.sortLabel}</span>
-                    <select
-                      data-action="sort-items"
-                      data-trip-id="${escapeHtml(trip.id)}"
-                      class="border border-white/10 bg-black/45 px-2 py-2 text-[0.62rem] uppercase tracking-[0.16em] text-stone-200 outline-none transition focus:border-white/30"
-                    >
-                      ${renderItemSortOptions(sortMode)}
-                    </select>
-                  </label>
+                  <div class="flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-300/62">
+                      <span>${STRINGS.items.sortLabel}</span>
+                      <select
+                        data-action="sort-items"
+                        data-trip-id="${escapeHtml(trip.id)}"
+                        class="border border-white/10 bg-black/45 px-2 py-2 text-[0.62rem] uppercase tracking-[0.16em] text-stone-200 outline-none transition focus:border-white/30"
+                      >
+                        ${renderItemSortOptions(sortMode)}
+                      </select>
+                    </label>
+                    ${
+                      adminMode && selectedFolder
+                        ? `
+                          <button
+                            type="button"
+                            data-action="delete-folder"
+                            data-trip-id="${escapeHtml(trip.id)}"
+                            data-folder-id="${escapeHtml(selectedFolder.id)}"
+                            class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
+                          >
+                            Delete Folder
+                          </button>
+                        `
+                        : ""
+                    }
+                  </div>
                   <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.2em] text-stone-300/60">
                     ${padCount(items.length, STRINGS.trips.objectsLabel)}
                   </p>
@@ -2853,11 +2968,18 @@ function syncFolderSelect(selectElement, tripId) {
 
 function getSelectedFolderId(tripId) {
   const folders = getFoldersForTrip(tripId);
-  if (selectedFolders.has(tripId)) {
-    return selectedFolders.get(tripId);
+  const currentSelection = selectedFolders.get(tripId);
+
+  if (currentSelection && folders.some((folder) => folder.id === currentSelection)) {
+    return currentSelection;
   }
 
-  const defaultFolderId = folders[0]?.id || ROOT_FOLDER_ID;
+  if (folders.length === 0) {
+    selectedFolders.delete(tripId);
+    return "";
+  }
+
+  const defaultFolderId = folders[0]?.id || "";
   selectedFolders.set(tripId, defaultFolderId);
   return defaultFolderId;
 }
@@ -2878,22 +3000,16 @@ function getFoldersForTrip(tripId) {
 
 function seedFolderDefaultsForTripState(trip) {
   const folderSeeds =
-    trip.folders && trip.folders.length > 0 ? trip.folders : [ROOT_FOLDER_ID];
+    trip.folders && trip.folders.length > 0 ? trip.folders : [];
 
   return folderSeeds.map((folderSlug, index) =>
     normalizeFolder(
       {
-        id: folderSlug === ROOT_FOLDER_ID ? ROOT_FOLDER_ID : slugifyFolder(folderSlug),
-        label:
-          folderSlug === ROOT_FOLDER_ID
-            ? trip.slug
-            : slugifyFolder(folderSlug),
+        id: slugifyFolder(folderSlug),
+        label: slugifyFolder(folderSlug),
         slug: folderSlug,
-        kind:
-          folderSlug === ROOT_FOLDER_ID
-            ? "root"
-            : classifyFolderKind(folderSlug),
-        sortOrder: folderSlug === ROOT_FOLDER_ID ? ROOT_FOLDER_SORT : index,
+        kind: classifyFolderKind(folderSlug),
+        sortOrder: index,
       },
       index
     )
@@ -2905,12 +3021,50 @@ function isTripExpanded(tripId) {
     return expandedTrips.get(tripId);
   }
 
-  expandedTrips.set(tripId, true);
-  return true;
+  expandedTrips.set(tripId, false);
+  return false;
 }
 
 function getItemsForFolder(tripId, folderId) {
   return itemsByFolder.get(buildFolderCacheKey(tripId, folderId)) || [];
+}
+
+async function loadFolderItems(tripId, folderId) {
+  if (!tripId || !folderId || !db) {
+    return [];
+  }
+
+  const cacheKey = buildFolderCacheKey(tripId, folderId);
+  const itemsQuery = query(
+    collection(
+      db,
+      runtimeConfig.collections.trips,
+      tripId,
+      "folders",
+      folderId,
+      "items"
+    ),
+    orderBy("createdAt", "desc")
+  );
+
+  const snapshot = await getDocs(itemsQuery);
+  const items = snapshot.docs.map((itemDoc) =>
+    normalizeItem({ id: itemDoc.id, ...itemDoc.data() })
+  );
+  itemsByFolder.set(cacheKey, items);
+  return items;
+}
+
+async function loadAllFolderItemsForTrip(tripId, folders) {
+  if (!tripId || !db || !Array.isArray(folders) || folders.length === 0) {
+    return;
+  }
+
+  try {
+    await Promise.all(folders.map((folder) => loadFolderItems(tripId, folder.id)));
+  } catch (error) {
+    showWarning(getFriendlyFirestoreMessage(error));
+  }
 }
 
 function getSortedItemsForFolder(tripId, folderId, sortMode = ITEM_SORT_MEDIA_DATE_ASC) {
@@ -3042,7 +3196,7 @@ function buildFolderPathLabel(trip, folder) {
     return "/";
   }
 
-  if (!folder || folder.id === ROOT_FOLDER_ID) {
+  if (!folder) {
     return `${trip.slug}/`;
   }
 
@@ -3054,7 +3208,7 @@ function buildFolderButtonLabel(trip, folder) {
     return "/";
   }
 
-  return folder.id === ROOT_FOLDER_ID ? `${trip.slug}/` : `${folder.slug}/`;
+  return `${folder.slug}/`;
 }
 
 function buildFolderSelectLabel(tripId, folder) {
@@ -3063,7 +3217,7 @@ function buildFolderSelectLabel(tripId, folder) {
     return folder.slug;
   }
 
-  return folder.id === ROOT_FOLDER_ID ? `${trip.slug}/` : `${folder.slug}/`;
+  return `${folder.slug}/`;
 }
 
 function pushUploadJob(job) {
@@ -3089,30 +3243,19 @@ function normalizeTrip(trip, index) {
       : index,
     subtitle: sanitizeUpper(trip?.subtitle || "FILE SYSTEM READY"),
     folders: Array.isArray(trip?.folders)
-      ? trip.folders.map((folder) =>
-          folder === ROOT_FOLDER_ID ? ROOT_FOLDER_ID : slugifyFolder(folder)
-        )
+      ? trip.folders.map((folder) => slugifyFolder(folder))
       : undefined,
   };
 }
 
 function normalizeFolder(folder, index) {
-  const slug =
-    folder?.id === ROOT_FOLDER_ID
-      ? ROOT_FOLDER_ID
-      : slugifyFolder(folder?.slug || folder?.label || folder?.id || `folder-${index}`);
+  const slug = slugifyFolder(folder?.slug || folder?.label || folder?.id || `folder-${index}`);
 
   return {
     id: slug,
     slug,
-    label:
-      slug === ROOT_FOLDER_ID
-        ? slugifyTrip(folder?.label || "root")
-        : slug,
-    kind:
-      slug === ROOT_FOLDER_ID
-        ? "root"
-        : String(folder?.kind || classifyFolderKind(slug)).toLowerCase(),
+    label: slug,
+    kind: String(folder?.kind || classifyFolderKind(slug)).toLowerCase(),
     sortOrder: Number.isFinite(Number(folder?.sortOrder))
       ? Number(folder.sortOrder)
       : index,
@@ -3383,7 +3526,7 @@ function getNextFolderSortOrder(tripId) {
   return (
     getFoldersForTrip(tripId).reduce(
       (max, folder) => Math.max(max, Number(folder.sortOrder) || 0),
-      ROOT_FOLDER_SORT
+      -1
     ) + 1
   );
 }
@@ -3396,8 +3539,7 @@ function parseFolderSeeds(value) {
   const normalized = String(value || "")
     .split(",")
     .map((entry) => slugifyFolder(entry))
-    .filter(Boolean)
-    .filter((entry) => entry !== ROOT_FOLDER_ID);
+    .filter(Boolean);
 
   return [...new Set(normalized)];
 }

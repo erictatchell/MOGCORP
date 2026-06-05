@@ -13,6 +13,7 @@ loadEnvFile(path.join(workspaceRoot, ".env.local"));
 const port = Number.parseInt(process.env.PORT || "3000", 10);
 const vaultPassword = process.env.VAULT_PASSWORD || "";
 const vaultCookieName = "vault_access";
+const vaultCookieMaxAgeSeconds = 7 * 24 * 60 * 60;
 const vaultCookieValue = vaultPassword
   ? buildVaultCookieValue(vaultPassword)
   : "";
@@ -135,7 +136,7 @@ async function handleVaultVerify(request, response) {
         message: "Incorrect vault password.",
       },
       {
-        "Set-Cookie": buildExpiredVaultCookie(),
+        "Set-Cookie": buildExpiredVaultCookie(request),
       }
     );
   }
@@ -148,7 +149,7 @@ async function handleVaultVerify(request, response) {
       unlocked: true,
     },
     {
-      "Set-Cookie": buildVaultCookieHeader(),
+      "Set-Cookie": buildVaultCookieHeader(request),
     }
   );
 }
@@ -283,12 +284,42 @@ function buildVaultCookieValue(password) {
     .digest("hex")}`;
 }
 
-function buildVaultCookieHeader() {
-  return `${vaultCookieName}=${vaultCookieValue}; Path=/; HttpOnly; SameSite=Lax`;
+function buildVaultCookieHeader(request) {
+  const expiresAt = new Date(Date.now() + vaultCookieMaxAgeSeconds * 1000).toUTCString();
+  return [
+    `${vaultCookieName}=${vaultCookieValue}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    `Max-Age=${vaultCookieMaxAgeSeconds}`,
+    `Expires=${expiresAt}`,
+    isHttpsRequest(request) ? "Secure" : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
 }
 
-function buildExpiredVaultCookie() {
-  return `${vaultCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+function buildExpiredVaultCookie(request) {
+  return [
+    `${vaultCookieName}=`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Lax",
+    "Max-Age=0",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    isHttpsRequest(request) ? "Secure" : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+function isHttpsRequest(request) {
+  const forwardedProto = String(request?.headers?.["x-forwarded-proto"] || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
+  return forwardedProto === "https" || Boolean(request?.socket?.encrypted);
 }
 
 function parseCookies(cookieHeader) {
