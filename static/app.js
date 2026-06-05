@@ -19,6 +19,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  writeBatch,
   where,
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import {
@@ -37,14 +38,16 @@ const DEFAULT_TRIPS = [
     id: "mtl-25",
     label: "MONTREAL 25",
     slug: "mtl-25",
-    sortOrder: 0,
+    tripNumber: 2,
+    sortOrder: 1,
     folders: ["thu", "fri", "sat", "sun", "mon", "movie"],
   },
   {
     id: "vic-24",
     label: "VICTORIA 24",
     slug: "vic-24",
-    sortOrder: 1,
+    tripNumber: 1,
+    sortOrder: 0,
     folders: [],
   },
 ];
@@ -79,7 +82,6 @@ const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
 const mobileMenuToggleLabel = document.getElementById("mobile-menu-toggle-label");
 const mobileMenuPanel = document.getElementById("mobile-menu-panel");
 const mobileMenuBackdrop = document.getElementById("mobile-menu-backdrop");
-const mobileRouteToggleLink = document.getElementById("mobile-route-toggle-link");
 const bannerRouteToggleLink = document.getElementById("banner-route-toggle-link");
 const bannerGoogleButton = document.getElementById("banner-google-signin-button");
 const bannerSignOutButton = document.getElementById("banner-sign-out-button");
@@ -147,6 +149,15 @@ const editPostBodyInput = document.getElementById("edit-post-body-input");
 const editPostCloseButton = document.getElementById("edit-post-close-button");
 const editPostCancelButton = document.getElementById("edit-post-cancel-button");
 const editPostSaveButton = document.getElementById("edit-post-save-button");
+const moveItemModal = document.getElementById("move-item-modal");
+const moveItemBackdrop = document.getElementById("move-item-backdrop");
+const moveItemForm = document.getElementById("move-item-form");
+const moveItemTitle = document.getElementById("move-item-title");
+const moveItemContext = document.getElementById("move-item-context");
+const moveItemFolderSelect = document.getElementById("move-item-folder-select");
+const moveItemCloseButton = document.getElementById("move-item-close-button");
+const moveItemCancelButton = document.getElementById("move-item-cancel-button");
+const moveItemSubmitButton = document.getElementById("move-item-submit-button");
 const videoPreviewModal = document.getElementById("video-preview-modal");
 const videoPreviewBackdrop = document.getElementById("video-preview-backdrop");
 const videoPreviewCloseButton = document.getElementById("video-preview-close-button");
@@ -198,8 +209,10 @@ let currentTextPostEdit = null;
 let adminPanelsVisible = false;
 let mobileMenuOpen = false;
 let editPostModalOpen = false;
+let moveItemModalOpen = false;
 let videoPreviewModalOpen = false;
 let currentVideoPreviewContext = null;
+let currentItemMove = null;
 let currentRoute = normalizeRoute(window.location.pathname);
 let featuredMessage = DEFAULT_FEATURED_MESSAGE;
 let vaultState = {
@@ -217,7 +230,7 @@ const folderUnsubscribers = new Map();
 
 applyStaticStrings();
 renderFeaturedMessage();
-startLogoPulse();
+startLogoGlitchLoop();
 renderAll();
 setupForms();
 initializeVaultExperience().catch((error) => {
@@ -249,10 +262,6 @@ function applyStaticStrings() {
 
   if (bannerRouteToggleLink) {
     bannerRouteToggleLink.textContent = STRINGS.auth.profile;
-  }
-
-  if (mobileRouteToggleLink) {
-    mobileRouteToggleLink.textContent = STRINGS.auth.profile;
   }
 
   if (adminPanelsToggleText) {
@@ -844,6 +853,7 @@ function initializeAuthListener() {
     } else {
       friendAccessIssue = false;
       resetTextPostEditor();
+      resetItemMoveDialog();
       adminPanelsVisible = false;
       setMobileMenuOpen(false);
       if (currentRoute === ROUTE_PROFILE) {
@@ -877,10 +887,14 @@ function setupForms() {
   uploadForm?.addEventListener("submit", handleUploadSubmit);
   textPostForm?.addEventListener("submit", handleTextPostSubmit);
   editPostForm?.addEventListener("submit", handleEditTextPostSubmit);
+  moveItemForm?.addEventListener("submit", handleMoveItemSubmit);
   profileImageForm?.addEventListener("submit", handleProfileImageSubmit);
   editPostCloseButton?.addEventListener("click", resetTextPostEditor);
   editPostCancelButton?.addEventListener("click", resetTextPostEditor);
   editPostBackdrop?.addEventListener("click", resetTextPostEditor);
+  moveItemCloseButton?.addEventListener("click", resetItemMoveDialog);
+  moveItemCancelButton?.addEventListener("click", resetItemMoveDialog);
+  moveItemBackdrop?.addEventListener("click", resetItemMoveDialog);
   videoPreviewCloseButton?.addEventListener("click", resetVideoPreview);
   videoPreviewBackdrop?.addEventListener("click", resetVideoPreview);
   videoPreviewPrevButton?.addEventListener("click", () => navigateVideoPreview(-1));
@@ -893,7 +907,6 @@ function setupForms() {
   mobileMenuBackdrop?.addEventListener("click", () => setMobileMenuOpen(false));
   desktopRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
   bannerRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
-  mobileRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
   bannerGoogleButton?.addEventListener("click", handleGoogleSignIn);
   uploadTripSelect?.addEventListener("change", renderAdminSelects);
   textTripSelect?.addEventListener("change", renderAdminSelects);
@@ -940,6 +953,11 @@ function handleWindowKeydown(event) {
   }
 
   if (event.key === "Escape") {
+    if (moveItemModalOpen) {
+      resetItemMoveDialog();
+      return;
+    }
+
     if (editPostModalOpen) {
       resetTextPostEditor();
       return;
@@ -1068,6 +1086,15 @@ function setVideoPreviewModalOpen(nextOpen) {
   }
 }
 
+function setMoveItemModalOpen(nextOpen) {
+  moveItemModalOpen = Boolean(nextOpen);
+
+  if (moveItemModal) {
+    moveItemModal.classList.toggle("hidden", !moveItemModalOpen);
+    moveItemModal.classList.toggle("flex", moveItemModalOpen);
+  }
+}
+
 function syncAdminPanelsToggle() {
   const shouldShow = Boolean(currentUser?.email && isAdmin());
 
@@ -1111,6 +1138,14 @@ function setAdminPanelsVisible(visible) {
 
   if (!nextVisible && currentTextPostEdit && !isCurrentUserTextOwner(currentTextPostEdit)) {
     resetTextPostEditor();
+  }
+
+  if (
+    !nextVisible &&
+    currentItemMove &&
+    !canMoveItem(currentItemMove.item, currentItemMove.tripId, currentItemMove.folderId)
+  ) {
+    resetItemMoveDialog();
   }
 
   adminPanelsVisible = nextVisible;
@@ -1242,7 +1277,7 @@ async function handleProfileImageSubmit(event) {
 function subscribeToTrips() {
   const tripsQuery = query(
     collection(db, runtimeConfig.collections.trips),
-    orderBy("sortOrder", "asc")
+    orderBy("sortOrder", "desc")
   );
 
   tripUnsubscribe?.();
@@ -1277,6 +1312,7 @@ function subscribeToTrips() {
           normalizeTrip({ id: tripDoc.id, ...tripDoc.data() }, index)
         )
         .filter((trip) => trip.status !== "deleted");
+      syncLegacyTripNumbers(snapshot.docs);
       syncFolderSubscriptions();
       renderAll();
     },
@@ -1404,6 +1440,7 @@ async function ensureDefaultTrips() {
         label: trip.label,
         slug: trip.slug,
         status: "active",
+        tripNumber: getTripSequenceNumber(trip),
         sortOrder: trip.sortOrder,
         subtitle: `${trip.slug.toUpperCase()} / FILE SYSTEM READY`,
         createdAt: serverTimestamp(),
@@ -1540,6 +1577,7 @@ async function handleTripSubmit(event) {
       label,
       slug,
       status: "active",
+      tripNumber: getNextTripNumber(),
       sortOrder: getNextTripSortOrder(),
       subtitle: `${slug.toUpperCase()} / FILE SYSTEM READY`,
       createdAt: serverTimestamp(),
@@ -2119,6 +2157,169 @@ function resetTextPostEditor() {
   setEditPostModalOpen(false);
 }
 
+function beginItemMove(tripId, folderId, item) {
+  if (!tripId || !folderId || !item || !canMoveItem(item, tripId, folderId)) {
+    return;
+  }
+
+  const trip = trips.find((entry) => entry.id === tripId);
+  const currentFolder = getFoldersForTrip(tripId).find((entry) => entry.id === folderId);
+  const destinationFolders = getFoldersForTrip(tripId).filter((entry) => entry.id !== folderId);
+
+  if (!trip || !currentFolder || destinationFolders.length === 0) {
+    return;
+  }
+
+  currentItemMove = {
+    tripId,
+    folderId,
+    itemId: item.id,
+    item,
+  };
+
+  if (moveItemTitle) {
+    moveItemTitle.textContent = getItemDisplayName(item);
+  }
+
+  if (moveItemContext) {
+    moveItemContext.textContent = `MOVE FROM ${buildFolderPathLabel(trip, currentFolder)}`;
+  }
+
+  if (moveItemFolderSelect) {
+    moveItemFolderSelect.innerHTML = destinationFolders
+      .map(
+        (folder) =>
+          `<option value="${escapeHtml(folder.id)}">${escapeHtml(
+            buildFolderSelectLabel(tripId, folder)
+          )}</option>`
+      )
+      .join("");
+    moveItemFolderSelect.value = destinationFolders[0]?.id || "";
+  }
+
+  setMoveItemModalOpen(true);
+  window.requestAnimationFrame(() => {
+    moveItemFolderSelect?.focus();
+  });
+}
+
+function resetItemMoveDialog() {
+  currentItemMove = null;
+  moveItemForm?.reset();
+
+  if (moveItemTitle) {
+    moveItemTitle.textContent = "";
+  }
+
+  if (moveItemContext) {
+    moveItemContext.textContent = "";
+  }
+
+  if (moveItemFolderSelect) {
+    moveItemFolderSelect.innerHTML = "";
+  }
+
+  if (moveItemSubmitButton) {
+    moveItemSubmitButton.disabled = false;
+  }
+
+  setMoveItemModalOpen(false);
+}
+
+async function handleMoveItemSubmit(event) {
+  event.preventDefault();
+
+  if (!db || !currentItemMove || !moveItemFolderSelect) {
+    return;
+  }
+
+  const { tripId, folderId, itemId } = currentItemMove;
+  const destinationFolderId = String(moveItemFolderSelect.value || "");
+  const destinationFolder = getFoldersForTrip(tripId).find(
+    (entry) => entry.id === destinationFolderId
+  );
+
+  if (!destinationFolderId || !destinationFolder || destinationFolderId === folderId) {
+    return;
+  }
+
+  const sourceRef = doc(
+    db,
+    runtimeConfig.collections.trips,
+    tripId,
+    "folders",
+    folderId,
+    "items",
+    itemId
+  );
+  const destinationRef = doc(
+    db,
+    runtimeConfig.collections.trips,
+    tripId,
+    "folders",
+    destinationFolderId,
+    "items",
+    itemId
+  );
+
+  moveItemSubmitButton?.toggleAttribute("disabled", true);
+
+  try {
+    const sourceSnapshot = await getDoc(sourceRef);
+
+    if (!sourceSnapshot.exists()) {
+      throw new Error("This item no longer exists.");
+    }
+
+    const sourceItem = normalizeItem({ id: sourceSnapshot.id, ...sourceSnapshot.data() });
+
+    if (!canMoveItem(sourceItem, tripId, folderId)) {
+      throw new Error("You do not have permission to move this item.");
+    }
+
+    const batch = writeBatch(db);
+    batch.set(destinationRef, {
+      ...sourceSnapshot.data(),
+      updatedAt: serverTimestamp(),
+      updatedByUid: currentUser?.uid || "",
+      updatedByEmail: currentUser?.email || "",
+      movedAt: serverTimestamp(),
+      movedByUid: currentUser?.uid || "",
+      movedByEmail: currentUser?.email || "",
+    });
+    batch.delete(sourceRef);
+    await batch.commit();
+
+    if (
+      currentTextPostEdit?.tripId === tripId &&
+      currentTextPostEdit.folderId === folderId &&
+      currentTextPostEdit.itemId === itemId
+    ) {
+      resetTextPostEditor();
+    }
+
+    if (
+      currentVideoPreviewContext?.tripId === tripId &&
+      currentVideoPreviewContext.folderId === folderId &&
+      currentVideoPreviewContext.itemId === itemId
+    ) {
+      resetVideoPreview();
+    }
+
+    const movedItemName = getItemDisplayName(sourceItem);
+    resetItemMoveDialog();
+    await Promise.all([
+      loadFolderItems(tripId, folderId),
+      loadFolderItems(tripId, destinationFolderId),
+    ]);
+    renderAll();
+    authDetail.textContent = `MOVED ${movedItemName.toUpperCase()} TO ${destinationFolder.slug.toUpperCase()}/`;
+  } catch (error) {
+    authDetail.textContent = getErrorMessage(error, "Could not move item.");
+    moveItemSubmitButton?.toggleAttribute("disabled", false);
+  }
+}
+
 function openVideoPreview(tripId, folderId, itemId) {
   if (!videoPreviewPlayer || !tripId || !folderId || !itemId) {
     return;
@@ -2222,7 +2423,7 @@ function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()
   }
 }
 
-function isCurrentUserTextOwner(item) {
+function isCurrentUserItemOwner(item) {
   return Boolean(
     currentUser?.uid &&
       (item?.createdByUid === currentUser.uid ||
@@ -2233,11 +2434,32 @@ function isCurrentUserTextOwner(item) {
   );
 }
 
+function isCurrentUserTextOwner(item) {
+  return isCurrentUserItemOwner(item);
+}
+
 function canEditTextPost(item) {
   return Boolean(
     item?.kind === "text" &&
       currentUser?.uid &&
       (isAdminViewEnabled() || isCurrentUserTextOwner(item))
+  );
+}
+
+function hasAlternativeFolderForItemMove(tripId, folderId) {
+  if (!tripId || !folderId) {
+    return false;
+  }
+
+  return getFoldersForTrip(tripId).some((folder) => folder.id !== folderId);
+}
+
+function canMoveItem(item, tripId, folderId) {
+  return Boolean(
+    item?.id &&
+      currentUser?.uid &&
+      hasAlternativeFolderForItemMove(tripId, folderId) &&
+      (isAdmin() || isCurrentUserItemOwner(item))
   );
 }
 
@@ -2329,6 +2551,13 @@ function handleTripBrowserClick(event) {
     return;
   }
 
+  const moveTrigger = event.target.closest("[data-action='move-item']");
+
+  if (moveTrigger) {
+    handleItemMoveClick(moveTrigger);
+    return;
+  }
+
   const deleteTrigger = event.target.closest("[data-action='delete-item']");
 
   if (deleteTrigger) {
@@ -2415,6 +2644,19 @@ function handleItemEditClick(trigger) {
   }
 
   beginTextPostEdit(tripId, folderId, item);
+}
+
+function handleItemMoveClick(trigger) {
+  const tripId = String(trigger.getAttribute("data-trip-id") || "");
+  const folderId = String(trigger.getAttribute("data-folder-id") || "");
+  const itemId = String(trigger.getAttribute("data-item-id") || "");
+  const item = getItemsForFolder(tripId, folderId).find((entry) => entry.id === itemId);
+
+  if (!tripId || !folderId || !itemId || !item) {
+    return;
+  }
+
+  beginItemMove(tripId, folderId, item);
 }
 
 async function handleTripMoveClick(trigger) {
@@ -2833,14 +3075,8 @@ function renderAuth() {
       currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
   }
 
-  if (mobileRouteToggleLink) {
-    mobileRouteToggleLink.textContent =
-      currentRoute === ROUTE_PROFILE ? STRINGS.auth.archive : STRINGS.auth.profile;
-  }
-
   setElementVisible(desktopRouteToggleLink, hasArchiveAccess, "inline-flex");
   setElementVisible(bannerRouteToggleLink, hasArchiveAccess, "inline-flex");
-  setElementVisible(mobileRouteToggleLink, hasArchiveAccess, "flex");
 
   if (!runtimeConfig) {
     authStatus.textContent = STRINGS.auth.civilianView;
@@ -2980,7 +3216,7 @@ function renderTrips() {
           <div class="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5">
             <div class="space-y-2">
               <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/55">${String(
-                index + 1
+                getTripSequenceNumber(trip, index)
               ).padStart(4, "0")}</p>
               <h2 class="text-2xl uppercase tracking-[0.18em] text-stone-100 sm:text-3xl">${escapeHtml(
                 `${trip.slug}/`
@@ -3214,36 +3450,59 @@ function renderItemMeta(item, tripId, folderId) {
           item.description
         )}</div>`
       : "";
-  const editButton = canEditTextPost(item)
-    ? `
+  const actionButtons = [];
+
+  if (canEditTextPost(item)) {
+    actionButtons.push(`
       <button
         type="button"
         data-action="edit-item"
         data-trip-id="${escapeHtml(tripId)}"
         data-folder-id="${escapeHtml(folderId)}"
         data-item-id="${escapeHtml(item.id)}"
-        class="mt-3 inline-flex border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
+        class="inline-flex border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
       >
         ${STRINGS.items.edit}
       </button>
-    `
-    : "";
-  const deleteButton = isAdminViewEnabled()
-    ? `
+    `);
+  }
+
+  if (canMoveItem(item, tripId, folderId)) {
+    actionButtons.push(`
+      <button
+        type="button"
+        data-action="move-item"
+        data-trip-id="${escapeHtml(tripId)}"
+        data-folder-id="${escapeHtml(folderId)}"
+        data-item-id="${escapeHtml(item.id)}"
+        class="inline-flex border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-cyan-100/30 hover:bg-cyan-100/[0.08]"
+      >
+        Move
+      </button>
+    `);
+  }
+
+  if (isAdminViewEnabled()) {
+    actionButtons.push(`
       <button
         type="button"
         data-action="delete-item"
         data-trip-id="${escapeHtml(tripId)}"
         data-folder-id="${escapeHtml(folderId)}"
         data-item-id="${escapeHtml(item.id)}"
-        class="mt-3 inline-flex border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
+        class="inline-flex border border-white/10 px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100"
       >
         ${STRINGS.items.delete}
       </button>
-    `
-    : "";
+    `);
+  }
 
-  return `${summary}${descriptionMarkup}${editButton}${deleteButton}`;
+  const actionsMarkup =
+    actionButtons.length > 0
+      ? `<div class="mt-3 flex flex-wrap gap-2">${actionButtons.join("")}</div>`
+      : "";
+
+  return `${summary}${descriptionMarkup}${actionsMarkup}`;
 }
 
 function renderItemPreview(item, tripId, folderId) {
@@ -3746,14 +4005,19 @@ function updateUploadJob(jobId, updates) {
 }
 
 function normalizeTrip(trip, index) {
+  const sortOrder = Number.isFinite(Number(trip?.sortOrder))
+    ? Number(trip.sortOrder)
+    : index;
+
   return {
     id: slugifyTrip(trip?.id || trip?.slug || `trip-${Date.now()}`),
     label: sanitizeUpper(trip?.label || "UNTITLED TRIP"),
     slug: slugifyTrip(trip?.slug || trip?.id || trip?.label || `trip-${Date.now()}`),
     status: String(trip?.status || "active").toLowerCase(),
-    sortOrder: Number.isFinite(Number(trip?.sortOrder))
-      ? Number(trip.sortOrder)
-      : index,
+    tripNumber: Number.isFinite(Number(trip?.tripNumber))
+      ? Number(trip.tripNumber)
+      : sortOrder + 1,
+    sortOrder,
     subtitle: sanitizeUpper(trip?.subtitle || "FILE SYSTEM READY"),
     folders: Array.isArray(trip?.folders)
       ? trip.folders.map((folder) => slugifyFolder(folder))
@@ -4050,6 +4314,53 @@ function getNextTripSortOrder() {
   );
 }
 
+function getNextTripNumber() {
+  return trips.reduce((max, trip) => Math.max(max, getTripSequenceNumber(trip)), 0) + 1;
+}
+
+function getTripSequenceNumber(trip, fallbackIndex = 0) {
+  if (Number.isFinite(Number(trip?.tripNumber))) {
+    return Number(trip.tripNumber);
+  }
+
+  if (Number.isFinite(Number(trip?.sortOrder))) {
+    return Number(trip.sortOrder) + 1;
+  }
+
+  return fallbackIndex + 1;
+}
+
+function syncLegacyTripNumbers(tripDocs) {
+  if (!db || !isAdmin() || !Array.isArray(tripDocs) || tripDocs.length === 0) {
+    return;
+  }
+
+  const pendingUpdates = tripDocs
+    .map((tripDoc, index) => {
+      const data = tripDoc.data();
+
+      if (Number.isFinite(Number(data?.tripNumber))) {
+        return null;
+      }
+
+      const normalizedTrip = normalizeTrip({ id: tripDoc.id, ...data }, index);
+      return setDoc(
+        doc(db, runtimeConfig.collections.trips, normalizedTrip.id),
+        { tripNumber: normalizedTrip.tripNumber },
+        { merge: true }
+      );
+    })
+    .filter(Boolean);
+
+  if (pendingUpdates.length === 0) {
+    return;
+  }
+
+  Promise.all(pendingUpdates).catch((error) => {
+    console.error("Could not backfill trip numbers.", error);
+  });
+}
+
 function getNextFolderSortOrder(tripId) {
   return (
     getFoldersForTrip(tripId).reduce(
@@ -4223,20 +4534,14 @@ function normalizeFeaturedMessage(value) {
   return normalized || DEFAULT_FEATURED_MESSAGE;
 }
 
-function startLogoPulse() {
+function startLogoGlitchLoop() {
   if (!logo) {
     return;
   }
 
-  let pulse = false;
-
-  window.setInterval(() => {
-    pulse = !pulse;
-    logo.classList.toggle("opacity-95", pulse);
-    logo.classList.toggle("translate-x-px", pulse);
-    logo.classList.toggle("opacity-100", !pulse);
-    logo.classList.toggle("translate-x-0", !pulse);
-  }, 1400);
+  const label = String(logo.textContent || "").replace(/\s+/g, " ").trim();
+  logo.dataset.text = label;
+  logo.classList.add("logo-glitch-loop");
 }
 
 function getErrorMessage(error, fallback) {

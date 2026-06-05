@@ -7,6 +7,158 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Teko:wght@500&display=swap" rel="stylesheet">
+  <style>
+    #logo.logo-glitch-loop {
+      position: relative;
+      display: inline-block;
+      isolation: isolate;
+      animation: logo-glitch-core 5s steps(1, end) infinite;
+      will-change: transform, text-shadow, filter;
+    }
+
+    #logo.logo-glitch-loop::before,
+    #logo.logo-glitch-loop::after {
+      content: attr(data-text);
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      mix-blend-mode: screen;
+      will-change: transform, opacity, clip-path;
+    }
+
+    #logo.logo-glitch-loop::before {
+      color: rgba(34, 211, 238, 0.88);
+      animation: logo-glitch-layer-a 5s steps(1, end) infinite;
+    }
+
+    #logo.logo-glitch-loop::after {
+      color: rgba(244, 114, 182, 0.84);
+      animation: logo-glitch-layer-b 5s steps(1, end) infinite;
+    }
+
+    @keyframes logo-glitch-core {
+      0%, 6%, 38%, 46%, 58%, 66%, 100% {
+        transform: translate3d(0, 0, 0) skewX(0deg);
+        text-shadow: 0 0 0 transparent;
+        filter: drop-shadow(0 0 0 transparent);
+      }
+
+      2% {
+        transform: translate3d(1px, 0, 0) skewX(1deg);
+        text-shadow: -3px 0 0 rgba(34, 211, 238, 0.7), 3px 0 0 rgba(244, 114, 182, 0.5);
+      }
+
+      4% {
+        transform: translate3d(-1px, 1px, 0) skewX(-1deg);
+        text-shadow: 3px 0 0 rgba(34, 211, 238, 0.55), -3px 0 0 rgba(244, 114, 182, 0.55);
+      }
+
+      40% {
+        transform: translate3d(2px, -1px, 0) skewX(1deg);
+        text-shadow: -4px 0 0 rgba(34, 211, 238, 0.82), 4px 0 0 rgba(244, 114, 182, 0.68);
+      }
+
+      42% {
+        transform: translate3d(-2px, 1px, 0) skewX(-1deg);
+        text-shadow: 4px 0 0 rgba(34, 211, 238, 0.65), -4px 0 0 rgba(244, 114, 182, 0.72);
+      }
+
+      60% {
+        transform: translate3d(1px, 0, 0) skewX(0.5deg);
+        text-shadow: -3px 0 0 rgba(34, 211, 238, 0.78), 3px 0 0 rgba(244, 114, 182, 0.64);
+      }
+
+      62% {
+        transform: translate3d(-1px, 0, 0) skewX(-0.5deg);
+        text-shadow: 3px 0 0 rgba(34, 211, 238, 0.64), -3px 0 0 rgba(244, 114, 182, 0.72);
+      }
+    }
+
+    @keyframes logo-glitch-layer-a {
+      0%, 38%, 46%, 58%, 66%, 100% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0);
+        clip-path: inset(0 0 0 0);
+      }
+
+      40% {
+        opacity: 0.9;
+        transform: translate3d(-8px, -2px, 0);
+        clip-path: inset(0 0 56% 0);
+      }
+
+      42% {
+        opacity: 0.6;
+        transform: translate3d(6px, 1px, 0);
+        clip-path: inset(8% 0 28% 0);
+      }
+
+      60% {
+        opacity: 0.85;
+        transform: translate3d(5px, 0, 0);
+        clip-path: inset(62% 0 0 0);
+      }
+
+      62% {
+        opacity: 0.55;
+        transform: translate3d(-7px, 1px, 0);
+        clip-path: inset(34% 0 20% 0);
+      }
+    }
+
+    @keyframes logo-glitch-layer-b {
+      0%, 0.9%, 6%, 38%, 46%, 58%, 66%, 100% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0);
+        clip-path: inset(0 0 0 0);
+      }
+
+      2% {
+        opacity: 0.7;
+        transform: translate3d(6px, 0, 0);
+        clip-path: inset(16% 0 48% 0);
+      }
+
+      4% {
+        opacity: 0.45;
+        transform: translate3d(-5px, 1px, 0);
+        clip-path: inset(58% 0 8% 0);
+      }
+
+      40% {
+        opacity: 0.8;
+        transform: translate3d(8px, 1px, 0);
+        clip-path: inset(46% 0 18% 0);
+      }
+
+      42% {
+        opacity: 0.45;
+        transform: translate3d(-6px, -1px, 0);
+        clip-path: inset(6% 0 60% 0);
+      }
+
+      60% {
+        opacity: 0.74;
+        transform: translate3d(-5px, 0, 0);
+        clip-path: inset(0 0 70% 0);
+      }
+
+      62% {
+        opacity: 0.48;
+        transform: translate3d(7px, -1px, 0);
+        clip-path: inset(68% 0 0 0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #logo.logo-glitch-loop,
+      #logo.logo-glitch-loop::before,
+      #logo.logo-glitch-loop::after {
+        animation: none !important;
+      }
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <script type="module" src="/static/app.js"></script>
 </head>
@@ -80,29 +232,23 @@
 
       <div id="mobile-menu-backdrop" class="fixed inset-0 z-30 hidden bg-black/60 xl:hidden"></div>
 
-      <aside id="mobile-menu-panel" class="fixed right-3 top-20 z-40 hidden w-[min(26rem,calc(100vw-1.5rem))] max-h-[calc(100vh-6rem)] overflow-auto border border-white/10 bg-neutral-950/96 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-md xl:hidden">
-        <div id="mobile-menu-content" class="space-y-4">
+      <aside id="mobile-menu-panel" class="fixed inset-x-3 top-[4.5rem] z-40 hidden max-h-[calc(100vh-5.25rem)] overflow-auto border border-white/10 bg-neutral-950/96 p-3 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-md xl:hidden sm:inset-x-auto sm:right-6 sm:top-20 sm:w-[26rem] sm:max-h-[calc(100vh-6rem)] sm:p-4">
+        <div id="mobile-menu-content" class="space-y-3 sm:space-y-4">
           <div id="mobile-access-panel-slot"></div>
 
-          <div class="grid gap-2 border border-white/10 bg-white/[0.03] p-3">
-            <button id="mobile-route-toggle-link" type="button" class="hidden w-full justify-center border border-white/10 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
-              Profile
-            </button>
-          </div>
-
-          <div id="mobile-admin-panel-slot"></div>
-
           <details id="friends-mobile-panel" class="border border-white/10 bg-white/[0.03]">
-            <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 sm:py-4">
               <span id="friends-mobile-title">Members</span>
               <span id="friends-mobile-count" class="text-stone-300/60">0000 MEMBERS</span>
             </summary>
-            <div class="border-t border-white/10 px-4 py-4">
+            <div class="border-t border-white/10 px-4 py-3.5 sm:py-4">
               <p id="friends-mobile-status" class="hidden font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/60">
               </p>
               <div id="friends-mobile-list" class="mt-4 space-y-2"></div>
             </div>
           </details>
+
+          <div id="mobile-admin-panel-slot"></div>
         </div>
       </aside>
 
@@ -123,31 +269,31 @@
         </div>
 
         <div id="desktop-access-panel-slot" class="hidden w-full xl:block xl:w-[420px] 2xl:w-[480px]">
-        <aside id="auth-panel" class="w-full max-w-none border border-white/10 bg-white/[0.03] p-3 sm:p-5">
+        <aside id="auth-panel" class="w-full max-w-none border border-white/10 bg-white/[0.03] p-4 sm:p-5">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+            <div class="space-y-2">
               <p id="auth-access-label" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/65">
                 Access
               </p>
-              <p id="auth-status" class="mt-2 text-base uppercase tracking-[0.18em] text-stone-100 sm:text-lg">
+              <p id="auth-status" class="text-base uppercase tracking-[0.18em] text-stone-100 sm:text-lg">
                 CIVILIAN
               </p>
-              <p id="auth-detail" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-xs uppercase tracking-[0.18em] text-stone-300/60">
+              <p id="auth-detail" class="break-all font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-xs uppercase leading-5 tracking-[0.18em] text-stone-300/60">
               </p>
             </div>
 
-            <div class="flex flex-col items-start gap-3 sm:items-end">
-              <label id="admin-panels-control" class="hidden items-center gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82">
+            <div class="flex w-full flex-col gap-3 border-t border-white/10 pt-4 sm:w-auto sm:min-w-[11rem] sm:items-end sm:border-t-0 sm:pt-0">
+              <label id="admin-panels-control" class="hidden w-full items-center justify-between gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 sm:justify-end">
                 <span id="admin-panels-toggle-text">Show Admin Panels</span>
                 <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
                   <input id="admin-panels-toggle" type="checkbox" class="peer sr-only">
                   <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-amber-200"></span>
                 </span>
               </label>
-              <button id="desktop-route-toggle-link" type="button" class="hidden justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
+              <button id="desktop-route-toggle-link" type="button" class="hidden w-full justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
                 Profile
               </button>
-              <button id="google-signin-button" type="button" class="hidden border border-white/12 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04]">
+              <button id="google-signin-button" type="button" class="hidden w-full justify-center border border-white/12 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
                 Sign In With Google
               </button>
               <button id="sign-out-button" type="button" class="hidden w-full items-center justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
@@ -455,6 +601,41 @@
             </button>
             <button id="edit-post-save-button" type="submit" class="w-full border border-amber-300/38 bg-amber-100/[0.04] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08] sm:w-auto sm:min-w-44">
               Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div id="move-item-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6">
+        <div id="move-item-backdrop" class="absolute inset-0 bg-black/72 backdrop-blur-sm"></div>
+
+        <form id="move-item-form" class="relative w-full max-w-2xl border border-cyan-200/38 bg-neutral-950 shadow-[0_24px_96px_rgba(0,0,0,0.58)]">
+          <div class="flex flex-col gap-3 border-b border-cyan-100/18 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+            <div class="min-w-0">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-cyan-100/78">
+                Move Item
+              </p>
+              <p id="move-item-title" class="mt-2 break-words text-lg uppercase tracking-[0.14em] text-stone-100 sm:text-xl"></p>
+              <p id="move-item-context" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/64"></p>
+            </div>
+            <button id="move-item-close-button" type="button" class="border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]">
+              Cancel Move
+            </button>
+          </div>
+
+          <div class="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
+            <label class="block">
+              <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Destination Folder</span>
+              <select id="move-item-folder-select" name="folderId" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition focus:border-white/35" required></select>
+            </label>
+          </div>
+
+          <div class="flex flex-col gap-3 border-t border-white/10 px-5 py-5 sm:flex-row sm:justify-end sm:px-6">
+            <button id="move-item-cancel-button" type="button" class="w-full border border-white/12 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] sm:w-auto sm:min-w-44">
+              Cancel Move
+            </button>
+            <button id="move-item-submit-button" type="submit" class="w-full border border-cyan-200/38 bg-cyan-100/[0.04] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-cyan-100 transition hover:border-cyan-100/55 hover:bg-cyan-100/[0.08] sm:w-auto sm:min-w-44">
+              Move Item
             </button>
           </div>
         </form>

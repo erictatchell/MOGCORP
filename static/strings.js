@@ -107,7 +107,7 @@ export const STRINGS = {
     textPost: "TEXT POST",
     edit: "Edit",
     emptyName: "EMPTY",
-    noObjects: "> NO OBJECTS YET",
+    noObjects: "> NO MOTION YET",
     delete: "Delete",
     itemRemoved: (name) => `${name.toUpperCase()} REMOVED`,
   },
