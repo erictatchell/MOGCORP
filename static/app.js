@@ -1,11 +1,11 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
   signInWithPopup,
   signOut as firebaseSignOut,
-} from "firebase/auth";
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 import {
   collectionGroup,
   collection,
@@ -20,7 +20,7 @@ import {
   serverTimestamp,
   setDoc,
   where,
-} from  "firebase/firestore";
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import {
   deleteObject,
   getDownloadURL,
@@ -28,7 +28,7 @@ import {
   listAll,
   ref as storageRef,
   uploadBytesResumable,
-} from "firebase/storage";
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 import { STRINGS, padCount } from "./strings.js";
 
 const DAY_FOLDERS = ["thu", "fri", "sat", "sun", "mon"];
