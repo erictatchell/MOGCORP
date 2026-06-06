@@ -5213,12 +5213,12 @@ function renderItemRows(items, tripId, folderId, view = "archive") {
   if (items.length === 0) {
     return `
       <tr class="text-stone-300/45 uppercase">
-        <td class="border-b border-white/8 px-2 py-2.5">${STRINGS.items.noObjects}</td>
-        <td class="border-b border-white/8 px-2 py-2.5">----</td>
-        <td class="border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
-        <td class="border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
-        <td class="border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
-        <td class="border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
+        <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.noObjects}</td>
+        <td class="align-middle border-b border-white/8 px-2 py-2.5">----</td>
+        <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
+        <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
+        <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
+        <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
       </tr>
     `;
   }
@@ -5245,15 +5245,15 @@ function renderItemRows(items, tripId, folderId, view = "archive") {
             )}" target="_blank" rel="noreferrer">${escapeHtml(displayName)}</a>`;
 
       return `
-        <tr class="align-top transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.012)]" : ""}"${certifiedRow ? ` style="${getCertifiedRowStyle()}"` : ""}>
-          <td class="min-w-[2.65rem] ${cellBorderClass} px-1 py-1.5 sm:min-w-[3rem] sm:px-1.5 sm:py-2 lg:min-w-[3.4rem]">${preview}</td>
-          <td class="min-w-[5.5rem] ${cellBorderClass} px-1.5 py-2 sm:min-w-[7rem] sm:px-2 lg:min-w-[9rem]">${nameMarkup}</td>
-          <td class="min-w-[3.25rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[4rem] sm:px-2 lg:min-w-[4.75rem]">${escapeHtml(
+        <tr class="transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.012)]" : ""}"${certifiedRow ? ` style="${getCertifiedRowStyle()}"` : ""}>
+          <td class="align-middle min-w-[2.65rem] ${cellBorderClass} px-1 py-1.5 sm:min-w-[3rem] sm:px-1.5 sm:py-2 lg:min-w-[3.4rem]">${preview}</td>
+          <td class="align-middle min-w-[5.5rem] ${cellBorderClass} px-1.5 py-2 sm:min-w-[7rem] sm:px-2 lg:min-w-[9rem]">${nameMarkup}</td>
+          <td class="align-middle min-w-[3.25rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[4rem] sm:px-2 lg:min-w-[4.75rem]">${escapeHtml(
             typeLabel
           )}</td>
-          <td class="min-w-[4.1rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[5.25rem] sm:px-2 lg:min-w-[6.5rem]">${author}</td>
-          <td class="min-w-[4.8rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[6rem] sm:px-2 lg:min-w-[7.5rem]">${certified}</td>
-          <td class="min-w-[6.5rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[8rem] sm:px-2 lg:min-w-[10rem]">${meta}</td>
+          <td class="align-middle min-w-[4.1rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[5.25rem] sm:px-2 lg:min-w-[6.5rem]">${author}</td>
+          <td class="align-middle min-w-[4.8rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[6rem] sm:px-2 lg:min-w-[7.5rem]">${certified}</td>
+          <td class="align-middle min-w-[6.5rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[8rem] sm:px-2 lg:min-w-[10rem]">${meta}</td>
         </tr>
       `;
     })
