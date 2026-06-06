@@ -197,8 +197,10 @@ const videoPreviewTitle = document.getElementById("video-preview-title");
 const videoPreviewBadge = document.getElementById("video-preview-badge");
 const videoPreviewFrame = document.getElementById("video-preview-frame");
 const videoPreviewPlayer = document.getElementById("video-preview-player");
+const videoPreviewImage = document.getElementById("video-preview-image");
 const videoPreviewPrevButton = document.getElementById("video-preview-prev-button");
 const videoPreviewNextButton = document.getElementById("video-preview-next-button");
+const videoPreviewCertifyButton = document.getElementById("video-preview-certify-button");
 const contributeModal = document.getElementById("contribute-modal");
 const contributeBackdrop = document.getElementById("contribute-backdrop");
 const contributeCloseButton = document.getElementById("contribute-close-button");
@@ -226,6 +228,7 @@ const ROUTE_UNKNOWN = "unknown";
 const AUTHOR_ALIAS_BRAND = "brand";
 const AUTHOR_ALIAS_SELF = "self";
 const HIGHLIGHT_FOLDER_LABEL = String(STRINGS.brand || "100GIGZ").trim() || "100GIGZ";
+const HIGHLIGHT_FOLDER_DISPLAY_LABEL = "HIGHLIGHTS";
 const HIGHLIGHT_FOLDER_ID = slugifyFolder(HIGHLIGHT_FOLDER_LABEL);
 const MAX_VIDEO_UPLOADS_PER_DAY = 10;
 const MAX_VIDEO_SIZE_BYTES = 500 * 1024 * 1024;
@@ -1026,6 +1029,7 @@ function setupForms() {
   videoPreviewBackdrop?.addEventListener("click", resetVideoPreview);
   videoPreviewPrevButton?.addEventListener("click", () => navigateVideoPreview(-1));
   videoPreviewNextButton?.addEventListener("click", () => navigateVideoPreview(1));
+  videoPreviewCertifyButton?.addEventListener("click", handleVideoPreviewCertifiedToggleClick);
   contributeCloseButton?.addEventListener("click", resetContributeDialog);
   contributeBackdrop?.addEventListener("click", resetContributeDialog);
   contributeModal?.addEventListener("click", handleContributeModalClick);
@@ -1958,8 +1962,8 @@ function syncFolderSubscriptions() {
         foldersByTrip.set(trip.id, folders);
 
         const selectedFolderId = getSelectedFolderId(trip.id);
-        if (!folders.some((folder) => folder.id === selectedFolderId)) {
-          selectedFolders.set(trip.id, folders[0].id);
+        if (selectedFolderId && !folders.some((folder) => folder.id === selectedFolderId)) {
+          selectedFolders.set(trip.id, "");
         }
 
         await loadAllFolderItemsForTrip(trip.id, folders);
@@ -3367,18 +3371,17 @@ function openVideoPreview(tripId, folderId, itemId, view = "archive") {
   }
 
   syncVideoPreviewNavigation(previewState);
-  videoPreviewPlayer.pause();
-  videoPreviewPlayer.src = previewState.currentItem.downloadURL;
-  videoPreviewPlayer.currentTime = 0;
-  videoPreviewPlayer.load();
+  syncVideoPreviewMedia(previewState);
   setVideoPreviewModalOpen(true);
 
-  window.requestAnimationFrame(() => {
-    const playPromise = videoPreviewPlayer.play();
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {});
-    }
-  });
+  if (isVideoPreviewItem(previewState.currentItem)) {
+    window.requestAnimationFrame(() => {
+      const playPromise = videoPreviewPlayer.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    });
+  }
 }
 
 function navigateVideoPreview(direction) {
@@ -3400,12 +3403,7 @@ function navigateVideoPreview(direction) {
 function resetVideoPreview() {
   currentVideoPreviewContext = null;
   syncVideoPreviewNavigation(null);
-
-  if (videoPreviewPlayer) {
-    videoPreviewPlayer.pause();
-    videoPreviewPlayer.removeAttribute("src");
-    videoPreviewPlayer.load();
-  }
+  syncVideoPreviewMedia(null);
 
   setVideoPreviewModalOpen(false);
 }
@@ -3445,14 +3443,12 @@ function getFolderVideoItems(tripId, folderId, view = "archive") {
       )
     : getSortedItemsForFolder(tripId, folderId, getItemSortMode(tripId, folderId, view));
 
-  return items.filter((item) => item.kind === "file" && item.mimeType.startsWith("video/"));
+  return items.filter(isPreviewableMediaItem);
 }
 
 function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()) {
   if (videoPreviewTitle) {
-    videoPreviewTitle.textContent = previewState
-      ? `CLIP PREVIEW // ${getItemDisplayName(previewState.currentItem)} // ${previewState.currentIndex + 1}/${previewState.items.length}`
-      : "";
+    videoPreviewTitle.textContent = previewState ? buildMediaPreviewTitle(previewState) : "";
   }
 
   syncVideoPreviewCertification(previewState);
@@ -3467,8 +3463,67 @@ function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()
   }
 }
 
+function syncVideoPreviewMedia(previewState = getCurrentVideoPreviewState()) {
+  const item = previewState?.currentItem || null;
+  const isVideo = isVideoPreviewItem(item);
+  const isImage = isImagePreviewItem(item);
+
+  if (videoPreviewPlayer) {
+    videoPreviewPlayer.classList.toggle("hidden", !isVideo);
+
+    if (isVideo) {
+      videoPreviewPlayer.pause();
+      videoPreviewPlayer.src = item.downloadURL;
+      videoPreviewPlayer.currentTime = 0;
+      videoPreviewPlayer.load();
+    } else {
+      videoPreviewPlayer.pause();
+      videoPreviewPlayer.removeAttribute("src");
+      videoPreviewPlayer.load();
+    }
+  }
+
+  if (videoPreviewImage) {
+    videoPreviewImage.classList.toggle("hidden", !isImage);
+
+    if (isImage) {
+      videoPreviewImage.src = item.downloadURL;
+      videoPreviewImage.alt = getItemDisplayName(item);
+    } else {
+      videoPreviewImage.removeAttribute("src");
+      videoPreviewImage.alt = "";
+    }
+  }
+}
+
+function buildMediaPreviewTitle(previewState) {
+  const item = previewState?.currentItem || null;
+  const previewType = isImagePreviewItem(item) ? "PHOTO PREVIEW" : "CLIP PREVIEW";
+  const sourceFolderId = resolveItemSourceFolderId(item, previewState.folderId);
+  const sourceLabel = buildItemSourceLabel(previewState.tripId, sourceFolderId);
+  const sourceSuffix = sourceLabel ? ` // ${sourceLabel}` : "";
+
+  return `${previewType} // ${getItemDisplayName(item)} // ${previewState.currentIndex + 1}/${previewState.items.length}${sourceSuffix}`;
+}
+
+function isPreviewableMediaItem(item) {
+  return Boolean(item?.kind === "file" && (isVideoPreviewItem(item) || isImagePreviewItem(item)));
+}
+
+function isVideoPreviewItem(item) {
+  return Boolean(item?.mimeType && String(item.mimeType).startsWith("video/"));
+}
+
+function isImagePreviewItem(item) {
+  return Boolean(item?.mimeType && String(item.mimeType).startsWith("image/"));
+}
+
 function syncVideoPreviewCertification(previewState = getCurrentVideoPreviewState()) {
   const certified = Boolean(previewState?.currentItem && isItemCertified(previewState.currentItem));
+  const canCertify = Boolean(
+    previewState?.currentItem?.kind === "file" &&
+      isAdminViewEnabled()
+  );
 
   if (videoPreviewBadge) {
     videoPreviewBadge.textContent = certified ? HIGHLIGHT_FOLDER_LABEL : "";
@@ -3501,6 +3556,25 @@ function syncVideoPreviewCertification(previewState = getCurrentVideoPreviewStat
     } else {
       videoPreviewFrame.classList.remove("border-amber-300/32", "bg-[rgba(32,22,6,0.62)]");
       videoPreviewFrame.classList.add("border-white/12", "bg-black/70");
+    }
+  }
+
+  if (videoPreviewCertifyButton) {
+    videoPreviewCertifyButton.classList.toggle("hidden", !canCertify);
+    videoPreviewCertifyButton.disabled = false;
+    videoPreviewCertifyButton.textContent = certified ? "Uncertify" : "Certify";
+    videoPreviewCertifyButton.setAttribute(
+      "aria-label",
+      certified ? "Remove Certification" : "Certify Media"
+    );
+
+    if (certified) {
+      videoPreviewCertifyButton.setAttribute(
+        "style",
+        `${getHighlightButtonStyle(true)}color:#fff8cb;`
+      );
+    } else {
+      videoPreviewCertifyButton.removeAttribute("style");
     }
   }
 }
@@ -3632,6 +3706,13 @@ function handleTripBrowserClick(event) {
     if (tripId && folderId && itemId) {
       openTextPreview(tripId, folderId, itemId);
     }
+    return;
+  }
+
+  const mediaPreviewTrigger = event.target.closest("[data-action='preview-media']");
+
+  if (mediaPreviewTrigger) {
+    handleVideoPreviewClick(mediaPreviewTrigger);
     return;
   }
 
@@ -3827,6 +3908,45 @@ async function handleItemCertifiedToggleClick(trigger) {
   const folderId = String(trigger.getAttribute("data-folder-id") || "");
   const itemId = String(trigger.getAttribute("data-item-id") || "");
   const item = getItemsForFolder(tripId, folderId).find((entry) => entry.id === itemId);
+  const sourceFolderId = resolveItemSourceFolderId(item, folderId);
+
+  if (!tripId || !folderId || !itemId || !item || item.kind !== "file") {
+    return;
+  }
+
+  await toggleItemCertification(tripId, sourceFolderId, itemId, trigger, item);
+}
+
+async function handleVideoPreviewCertifiedToggleClick(event) {
+  if (!db || !isAdminViewEnabled()) {
+    return;
+  }
+
+  const previewState = getCurrentVideoPreviewState();
+  const item = previewState?.currentItem || null;
+  const sourceFolderId = resolveItemSourceFolderId(item, previewState?.folderId || "");
+
+  if (!previewState || !item || item.kind !== "file" || !sourceFolderId) {
+    return;
+  }
+
+  await toggleItemCertification(
+    previewState.tripId,
+    sourceFolderId,
+    previewState.itemId,
+    event.currentTarget,
+    item
+  );
+}
+
+async function toggleItemCertification(tripId, folderId, itemId, trigger, fallbackItem = null) {
+  if (!db || !isAdminViewEnabled()) {
+    return;
+  }
+
+  const item =
+    getItemsForFolder(tripId, folderId).find((entry) => entry.id === itemId) ||
+    fallbackItem;
 
   if (!tripId || !folderId || !itemId || !item || item.kind !== "file") {
     return;
@@ -3843,7 +3963,9 @@ async function handleItemCertifiedToggleClick(trigger) {
     itemId
   );
 
-  trigger.disabled = true;
+  if (trigger) {
+    trigger.disabled = true;
+  }
 
   try {
     const batch = writeBatch(db);
@@ -3858,7 +3980,7 @@ async function handleItemCertifiedToggleClick(trigger) {
       batch.set(
         doc(db, runtimeConfig.collections.trips, tripId, "folders", HIGHLIGHT_FOLDER_ID),
         {
-          label: HIGHLIGHT_FOLDER_LABEL,
+          label: HIGHLIGHT_FOLDER_DISPLAY_LABEL,
           slug: HIGHLIGHT_FOLDER_ID,
           kind: "highlight",
           sortOrder: getHighlightFolderSortOrder(tripId),
@@ -3879,13 +4001,26 @@ async function handleItemCertifiedToggleClick(trigger) {
     }
 
     await loadFolderItems(tripId, folderId);
+
+    if (
+      currentVideoPreviewContext?.tripId === tripId &&
+      currentVideoPreviewContext.itemId === itemId
+    ) {
+      currentVideoPreviewContext.folderId = folderId;
+    }
+
     renderAll();
+    syncVideoPreviewNavigation();
+    syncVideoPreviewMedia();
+
     authDetail.textContent = nextCertified
       ? `${getItemDisplayName(item).toUpperCase()} CERTIFIED / ADDED TO ${HIGHLIGHT_FOLDER_LABEL}`
       : `${getItemDisplayName(item).toUpperCase()} REMOVED FROM ${HIGHLIGHT_FOLDER_LABEL}`;
   } catch (error) {
     authDetail.textContent = getErrorMessage(error, STRINGS.errors.itemCertificationFailed);
-    trigger.disabled = false;
+    if (trigger) {
+      trigger.disabled = false;
+    }
   }
 }
 
@@ -4006,11 +4141,7 @@ async function handleFolderDeleteClick(trigger) {
     foldersByTrip.set(tripId, remainingFolders);
 
     if (selectedFolders.get(tripId) === folderId) {
-      if (remainingFolders[0]) {
-        selectedFolders.set(tripId, remainingFolders[0].id);
-      } else {
-        selectedFolders.delete(tripId);
-      }
+      selectedFolders.set(tripId, "");
     }
 
     if (currentTextPostEdit?.tripId === tripId && currentTextPostEdit.folderId === folderId) {
@@ -4453,21 +4584,21 @@ function renderTrips() {
     .map((trip, index) => {
       const folders = getFoldersForTrip(trip.id);
       const selectedFolderId = getSelectedFolderId(trip.id);
-      const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) || folders[0];
+      const selectedFolder = folders.find((folder) => folder.id === selectedFolderId) || null;
       const activeFolderId = selectedFolder?.id || "";
       const sortMode = getItemSortMode(trip.id, activeFolderId);
-      const items = getSortedItemsForFolder(trip.id, activeFolderId, sortMode);
+      const items = selectedFolder
+        ? getSortedItemsForFolder(trip.id, activeFolderId, sortMode)
+        : [];
       const pathLabel = buildFolderPathLabel(trip, selectedFolder);
       const expanded = isTripExpanded(trip.id);
-      const tripToggleLabel = expanded
-        ? STRINGS.trips.collapseTrip
-        : STRINGS.trips.expandTrip;
+      const tripToggleIndicatorMarkup = renderTripToggleIndicator(expanded);
       const tripShellClass = expanded
         ? "border border-white/10  bg-white/[0.02]"
         : "border border-white/10 bg-white/[0.02]";
       const tripHeaderClass = expanded
-        ? "flex flex-col gap-3 border-b border-white/10 bg-[linear-gradient(to_right,rgba(38,38,38,0.08),rgba(255,255,255,0.008)_42%,transparent)] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5"
-        : "flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5";
+        ? "relative flex flex-col gap-3 border-b border-white/10 bg-[linear-gradient(to_right,rgba(38,38,38,0.08),rgba(255,255,255,0.008)_42%,transparent)] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5"
+        : "relative flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5";
       const tripContentClass = expanded
         ? "grid gap-5 bg-[linear-gradient(to_bottom,rgba(88, 88, 88, 0.25),rgba(15, 15, 15, 0.01))] p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-5"
         : "hidden gap-5 p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-5";
@@ -4475,6 +4606,7 @@ function renderTrips() {
       return `
         <section class="${tripShellClass}">
           <div class="${tripHeaderClass}">
+            ${tripToggleIndicatorMarkup}
             <div class="space-y-2">
               <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/55">${String(
                 getTripSequenceNumber(trip, index)
@@ -4488,15 +4620,6 @@ function renderTrips() {
             </div>
             <div class="max-w-full overflow-x-auto">
               <div class="flex w-max items-center gap-3 pr-1">
-                <button
-                  type="button"
-                  data-action="toggle-trip"
-                  data-trip-id="${escapeHtml(trip.id)}"
-                  aria-expanded="${expanded ? "true" : "false"}"
-                  class="border border-white/10 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]"
-                >
-                  ${tripToggleLabel}
-                </button>
                 <div class="shrink-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.2em] text-stone-300/60">
                   ${padCount(folders.length, STRINGS.trips.foldersLabel)}
                 </div>
@@ -4860,10 +4983,60 @@ function renderActiveFolderPanel({
   const pathMarkup = highlightFolderSelected
     ? `<span style="${getHighlightPanelTextStyle()}">${escapeHtml(pathLabel)}</span>`
     : escapeHtml(pathLabel);
+  const showSourceColumn = highlightFolderSelected;
+  const tableMinWidthClass = showSourceColumn ? "min-w-[56rem]" : "min-w-[48rem]";
+  const mobileControlsMarkup = `
+    <p class="mb-3 border-b border-white/10 pb-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.14em] ${isProfileView ? "text-stone-300/68" : "text-stone-300/60"}">
+      ${isProfileView ? buildMemberPostCountLabel(items.length) : padCount(items.length, STRINGS.trips.objectsLabel)}
+    </p>
+    <label class="block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] ${isProfileView ? "text-stone-300/68" : "text-stone-300/62"}">
+      <span class="mb-2 block">${STRINGS.items.sortLabel}</span>
+      <select
+        data-action="sort-items"
+        data-view="${escapeHtml(view)}"
+        data-trip-id="${escapeHtml(trip.id)}"
+        class="w-full border ${isProfileView ? "border-white/12 bg-white/[0.03]" : "border-white/10 bg-black/45"} px-2 py-2 text-[0.58rem] uppercase tracking-[0.12em] text-stone-200 outline-none transition focus:border-white/30"
+      >
+        ${renderItemSortOptions(sortMode)}
+      </select>
+    </label>
+    ${
+      adminMode && !highlightFolderSelected
+        ? `
+          <button
+            type="button"
+            data-action="delete-folder"
+            data-trip-id="${escapeHtml(trip.id)}"
+            data-folder-id="${escapeHtml(selectedFolder.id)}"
+            class="mt-3 w-full border border-sky-300/32 bg-sky-100/[0.03] px-2.5 py-2 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.14em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08]"
+          >
+            Delete Folder
+          </button>
+        `
+        : ""
+    }
+    ${contributeMarkup ? `<div class="mt-3 flex">${contributeMarkup}</div>` : ""}
+  `;
 
   return `
     <div class="${responsiveClass} ${panelShellClass}"${panelStyle ? ` style="${panelStyle}"` : ""}>
-      <div class="flex flex-col gap-3 border-b border-white/10 pb-4">
+      <div class="sticky top-0 z-20 -mx-3 border-b border-white/10 bg-neutral-950/95 px-3 py-2 backdrop-blur lg:hidden">
+        <div class="flex min-w-0 items-center justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <p class="break-all font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em] text-stone-400/72 [overflow-wrap:anywhere]">&gt; ${pathMarkup}</p>
+          </div>
+          <details class="relative shrink-0">
+            <summary class="flex h-9 w-9 cursor-pointer list-none items-center justify-center border border-white/12 bg-black/40 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] leading-none tracking-[0.08em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]" aria-label="Folder controls">
+              ...
+            </summary>
+            <div class="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-60 border border-white/12 bg-neutral-950/98 p-3 shadow-[0_18px_54px_rgba(0,0,0,0.5)]">
+              ${mobileControlsMarkup}
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="hidden flex-col gap-3 border-b border-white/10 pb-4 lg:flex">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div class="min-w-0">
             <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.24em] ${isProfileView ? "text-stone-300/68" : "text-stone-300/60"}">Active Folder</p>
@@ -4890,7 +5063,7 @@ function renderActiveFolderPanel({
                       data-action="delete-folder"
                       data-trip-id="${escapeHtml(trip.id)}"
                       data-folder-id="${escapeHtml(selectedFolder.id)}"
-                      class="border border-amber-300/32 bg-amber-100/[0.03] px-2.5 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08] sm:px-3 sm:text-[0.62rem] sm:tracking-[0.18em]"
+                      class="border border-sky-300/32 bg-sky-100/[0.03] px-2.5 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.14em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08] sm:px-3 sm:text-[0.62rem] sm:tracking-[0.18em]"
                     >
                       Delete Folder
                     </button>
@@ -4907,20 +5080,21 @@ function renderActiveFolderPanel({
       </div>
 
       <div class="mt-4 max-w-full overflow-hidden rounded-sm border ${highlightFolderSelected ? "border-amber-300/28" : isProfileView ? "border-white/10" : "border-white/8"} bg-black/18">
-        <div class="relative max-h-[46vh] max-w-full overflow-x-auto overflow-y-auto overscroll-x-contain lg:max-h-[68vh] xl:max-h-[75vh]">
-          <table class="w-max min-w-[26rem] border-collapse font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] tracking-[0.04em] text-stone-200/85 sm:min-w-[31rem] sm:text-[0.62rem] sm:tracking-[0.06em] lg:min-w-[37rem] lg:text-[0.68rem] lg:tracking-[0.08em] xl:min-w-full">
+        <div class="relative max-h-[62vh] max-w-full overflow-x-auto overflow-y-auto overscroll-x-contain lg:max-h-[68vh] xl:max-h-[75vh]">
+          <table class="w-max ${tableMinWidthClass} border-collapse font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] tracking-[0.06em] text-stone-200/85 sm:min-w-[52rem] sm:text-[0.72rem] sm:tracking-[0.07em] lg:min-w-[58rem] lg:text-[0.74rem] lg:tracking-[0.08em] xl:min-w-full">
             <thead class="bg-white/[0.02] text-stone-300/55 uppercase">
               <tr>
-                <th class="sticky top-0 z-10 min-w-[2.65rem] break-all border-b border-white/10 bg-neutral-950 px-1 py-2 text-left text-[0.48rem] font-normal leading-tight shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[3rem] sm:px-1.5 sm:py-2.5 sm:text-[0.56rem] lg:min-w-[3.4rem] lg:text-[0.68rem]">${STRINGS.items.previewColumn}</th>
-                <th class="sticky top-0 z-10 min-w-[5.5rem] border-b border-white/10 bg-neutral-950 px-1.5 py-2 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[7rem] sm:px-2 sm:py-2.5 lg:min-w-[9rem]">${STRINGS.items.nameColumn}</th>
-                <th class="sticky top-0 z-10 min-w-[3.25rem] border-b border-white/10 bg-neutral-950 px-1.5 py-2 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[4rem] sm:px-2 sm:py-2.5 lg:min-w-[4.75rem]">${STRINGS.items.typeColumn}</th>
-                <th class="sticky top-0 z-10 min-w-[4.1rem] border-b border-white/10 bg-neutral-950 px-1.5 py-2 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[5.25rem] sm:px-2 sm:py-2.5 lg:min-w-[6.5rem]">${STRINGS.items.authorColumn}</th>
-                <th class="sticky top-0 z-10 min-w-[4.8rem] border-b border-white/10 bg-neutral-950 px-1.5 py-2 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[6rem] sm:px-2 sm:py-2.5 lg:min-w-[7.5rem]">${STRINGS.items.certifiedColumn}</th>
-                <th class="sticky top-0 z-10 min-w-[6.5rem] border-b border-white/10 bg-neutral-950 px-1.5 py-2 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[8rem] sm:px-2 sm:py-2.5 lg:min-w-[10rem]">${STRINGS.items.metaColumn}</th>
+                <th class="sticky top-0 z-10 min-w-[4rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left text-[0.62rem] font-normal leading-tight shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[4.5rem] sm:px-2.5 sm:py-3 sm:text-[0.66rem]">${STRINGS.items.previewColumn}</th>
+                ${showSourceColumn ? `<th class="sticky top-0 z-10 min-w-[7rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[8rem] sm:px-2.5 sm:py-3">${STRINGS.items.sourceColumn}</th>` : ""}
+                <th class="sticky top-0 z-10 min-w-[11rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[12rem] sm:px-2.5 sm:py-3">${STRINGS.items.nameColumn}</th>
+                <th class="sticky top-0 z-10 min-w-[5rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[5.5rem] sm:px-2.5 sm:py-3">${STRINGS.items.typeColumn}</th>
+                <th class="sticky top-0 z-10 min-w-[7rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[7.5rem] sm:px-2.5 sm:py-3">${STRINGS.items.authorColumn}</th>
+                <th class="sticky top-0 z-10 min-w-[8rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[8.5rem] sm:px-2.5 sm:py-3">${STRINGS.items.certifiedColumn}</th>
+                <th class="sticky top-0 z-10 min-w-[12rem] border-b border-white/10 bg-neutral-950 px-2 py-2.5 text-left font-normal shadow-[0_1px_0_rgba(255,255,255,0.05)] sm:min-w-[14rem] sm:px-2.5 sm:py-3">${STRINGS.items.metaColumn}</th>
               </tr>
             </thead>
             <tbody>
-              ${renderItemRows(items, trip.id, selectedFolder.id, view)}
+              ${renderItemRows(items, trip.id, selectedFolder.id, view, { showSourceColumn })}
             </tbody>
           </table>
         </div>
@@ -4948,10 +5122,39 @@ function renderTripSections({ view = "archive", profileFriend = null } = {}) {
   return sections;
 }
 
+function renderNoFolderSelectedPanel({
+  isProfileView = false,
+  responsiveClass = "",
+} = {}) {
+  return `
+    <div class="${responsiveClass} min-w-0 border ${isProfileView ? "border-white/10 bg-black/28" : "border-white/10 bg-black/20"} p-5">
+      <div class="border-b border-white/10 pb-4">
+        <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.24em] ${isProfileView ? "text-stone-300/68" : "text-stone-300/60"}">Active Folder</p>
+        <p class="mt-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-sm uppercase tracking-[0.16em] text-stone-300/55">&gt; NO FOLDER SELECTED</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderTripToggleIndicator(expanded) {
+  const points = expanded ? "8 42 32 18 56 42" : "8 22 32 46 56 22";
+
+  return `
+    <span
+      aria-hidden="true"
+      class="pointer-events-none absolute right-3 top-3 z-10 flex h-6 w-8 items-center justify-center text-stone-100/62 sm:right-4 sm:top-4 sm:h-7 sm:w-9"
+    >
+      <svg viewBox="0 0 64 64" class="h-full w-full" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="${points}"></polyline>
+      </svg>
+    </span>
+  `;
+}
+
 function renderTripSection(trip, index, { view = "archive", profileFriend = null } = {}) {
   const isProfileView = view === "profile";
   const adminMode = !isProfileView && isAdminViewEnabled();
-  const adminContextButtonClass = "shrink-0 border border-amber-300/32 bg-amber-100/[0.03] px-2.5 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08] disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:text-[0.62rem] sm:tracking-[0.18em]";
+  const adminContextButtonClass = "shrink-0 border border-sky-300/32 bg-sky-100/[0.03] px-2.5 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.14em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08] disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:text-[0.62rem] sm:tracking-[0.18em]";
   const folders = isProfileView
     ? getProfileFoldersForTrip(profileFriend, trip.id)
     : getFoldersForTrip(trip.id);
@@ -4972,21 +5175,19 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
   const expanded = isProfileView ? true : isTripExpanded(trip.id);
   const pathLabel = selectedFolder ? buildFolderPathLabel(trip, selectedFolder) : `${trip.slug}/`;
   const highlightFolderSelected = isHighlightFolder(selectedFolder);
-  const tripToggleLabel = expanded ? STRINGS.trips.collapseTrip : STRINGS.trips.expandTrip;
+  const tripToggleIndicatorMarkup = isProfileView ? "" : renderTripToggleIndicator(expanded);
   const shellClass = isProfileView
     ? "border border-white/12 bg-[linear-gradient(to_bottom,rgba(38,38,38,0.18),rgba(255,255,255,0.02)_40%,rgba(0,0,0,0.1))]"
     : "border border-white/10 bg-white/[0.02]";
   const headerClass = isProfileView
     ? "flex flex-col gap-3 border-b border-white/10 bg-[linear-gradient(to_right,rgba(38,38,38,0.18),rgba(255,255,255,0.01)_46%,transparent)] px-4 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-5"
     : expanded
-      ? "flex flex-col gap-3 border-b border-white/10 bg-[linear-gradient(to_right,rgba(38,38,38,0.08),rgba(255,255,255,0.008)_42%,transparent)] px-4 py-4 transition hover:bg-[linear-gradient(to_right,rgba(52,52,52,0.11),rgba(255,255,255,0.014)_42%,transparent)] sm:flex-row sm:items-end sm:justify-between sm:px-5"
-      : "flex flex-col gap-3 border-b border-white/10 px-4 py-4 transition hover:bg-[linear-gradient(to_right,rgba(40,40,40,0.08),rgba(255,255,255,0.012)_42%,transparent)] sm:flex-row sm:items-end sm:justify-between sm:px-5";
+      ? "relative flex flex-col gap-3 border-b border-white/10 bg-[linear-gradient(to_right,rgba(38,38,38,0.08),rgba(255,255,255,0.008)_42%,transparent)] px-4 py-4 transition hover:bg-[linear-gradient(to_right,rgba(52,52,52,0.11),rgba(255,255,255,0.014)_42%,transparent)] sm:flex-row sm:items-end sm:justify-between sm:px-5"
+      : "relative flex flex-col gap-3 border-b border-white/10 px-4 py-4 transition hover:bg-[linear-gradient(to_right,rgba(40,40,40,0.08),rgba(255,255,255,0.012)_42%,transparent)] sm:flex-row sm:items-end sm:justify-between sm:px-5";
   const contentClass = expanded
-    ? "grid gap-5 p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-5"
-    : "hidden gap-5 p-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-5";
-  const folderRailClass = selectedFolder
-    ? "min-w-0 border"
-    : "min-w-0 border lg:col-span-2";
+    ? "mobile-trip-open flex flex-col gap-4 p-0 lg:grid lg:gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-5"
+    : "hidden flex-col gap-4 p-0 lg:gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:p-5";
+  const folderRailClass = "min-w-0 border";
   const contributeMarkup =
     !isProfileView && canUploadMedia() && selectedFolder && !highlightFolderSelected
       ? `
@@ -5018,7 +5219,7 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
         highlightFolderSelected,
         pathLabel,
         contributeMarkup,
-        responsiveClass: "mt-4 lg:hidden",
+        responsiveClass: "mobile-folder-open mt-3 -mx-4 overflow-hidden lg:hidden",
       })
     : "";
   const desktopActiveFolderPanelMarkup = selectedFolder
@@ -5035,11 +5236,15 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
         contributeMarkup,
         responsiveClass: "hidden lg:block",
       })
-    : "";
+    : renderNoFolderSelectedPanel({
+        isProfileView,
+        responsiveClass: "hidden lg:block",
+      });
 
   return `
     <section class="${shellClass}">
       <div class="${headerClass}${headerInteractiveClass}"${headerToggleAttributes}>
+        ${tripToggleIndicatorMarkup}
         <div class="space-y-2">
           <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] ${isProfileView ? "text-stone-200/72" : "text-stone-300/55"}">${String(
             getTripSequenceNumber(trip, index)
@@ -5052,17 +5257,7 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
             ${
               isProfileView
                 ? `<div class="shrink-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em] text-stone-300/68 sm:text-[0.68rem] sm:tracking-[0.2em]">AUTHORED TRIP</div>`
-                : `
-                  <button
-                    type="button"
-                    data-action="toggle-trip"
-                    data-trip-id="${escapeHtml(trip.id)}"
-                    aria-expanded="${expanded ? "true" : "false"}"
-                    class="border border-white/10 px-2.5 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.14em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] sm:px-3 sm:text-[0.62rem] sm:tracking-[0.18em]"
-                  >
-                    ${tripToggleLabel}
-                  </button>
-                `
+                : ""
             }
             <div class="shrink-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em] ${isProfileView ? "text-stone-300/68" : "text-stone-300/60"} sm:text-[0.72rem] sm:tracking-[0.2em]">
               ${padCount(folders.length, STRINGS.trips.foldersLabel)}
@@ -5128,13 +5323,20 @@ function renderTripFolderButtons(trip, folders, selectedFolderId, view = "archiv
       const folderItems = view === "profile"
         ? getProfileItemsForFolder(profileFriend, trip.id, folder.id)
         : getItemsForFolder(trip.id, folder.id);
-      const buttonStyle = highlightFolder ? getHighlightButtonStyle(isSelected) : "";
-      const labelMarkup = highlightFolder
-        ? `<span style="${getHighlightTextStyle()}">${escapeHtml(buildFolderButtonLabel(trip, folder))}</span>`
-        : escapeHtml(buildFolderButtonLabel(trip, folder));
-      const countMarkup = highlightFolder
-        ? `<span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] tracking-[0.16em]" style="${getHighlightTextStyle()}">${escapeHtml(String(folderItems.length))}</span>`
-        : `<span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] tracking-[0.16em] text-stone-400/72">${escapeHtml(String(folderItems.length))}</span>`;
+      const buttonStyle = highlightFolder
+        ? getHighlightFolderButtonStyle(isSelected)
+        : isSelected
+          ? getFocusedFolderButtonStyle()
+          : "";
+      const shortLabel = buildFolderButtonLabel(trip, folder);
+      const fullLabel = buildFolderPathLabel(trip, folder);
+      const highlightTextStyle = highlightFolder && !isSelected ? getHighlightTextStyle() : "";
+      const labelToneClass = isSelected ? " text-black" : "";
+      const countToneClass = isSelected ? "text-black/70" : "text-stone-400/72";
+      const labelStyleAttribute = highlightTextStyle ? ` style="${highlightTextStyle}"` : "";
+      const countStyleAttribute = highlightTextStyle ? ` style="${highlightTextStyle}"` : "";
+      const labelMarkup = `<span class="hidden lg:inline${labelToneClass}"${labelStyleAttribute}>${escapeHtml(shortLabel)}</span><span class="lg:hidden${labelToneClass}"${labelStyleAttribute}>${escapeHtml(fullLabel)}</span>`;
+      const countMarkup = `<span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] tracking-[0.16em] ${countToneClass}"${countStyleAttribute}>${escapeHtml(String(folderItems.length))}</span>`;
 
       return `
         <button
@@ -5145,13 +5347,15 @@ function renderTripFolderButtons(trip, folders, selectedFolderId, view = "archiv
           data-folder-id="${escapeHtml(folder.id)}"
           class="flex w-full min-w-0 items-center justify-between gap-3 border px-3 py-3 text-left transition ${
             highlightFolder
-              ? "border-transparent bg-[rgba(16,12,3,0.16)] text-stone-100 hover:opacity-95"
+              ? isSelected
+                ? "folder-button-selected highlight-folder-button border-transparent text-black"
+                : "highlight-folder-button border-transparent bg-[rgba(16,12,3,0.16)] text-stone-100"
               : isSelected
-              ? "border-stone-100 bg-white/[0.08] text-stone-100"
-              : "border-white/10 bg-black/20 text-stone-200 hover:border-white/28 hover:bg-white/[0.04]"
+              ? "folder-button-selected border-stone-100 bg-stone-100 text-black"
+              : "border-white/10 bg-black/20 text-stone-200 hover:-translate-y-px hover:border-white/32 hover:bg-white/[0.06] hover:text-white"
           }"${buttonStyle ? ` style="${buttonStyle}"` : ""}
         >
-          <span class="min-w-0 flex-1 break-words text-sm uppercase tracking-[0.14em]">${labelMarkup}</span>
+          <span class="min-w-0 flex-1 break-all text-sm uppercase tracking-[0.14em] [overflow-wrap:anywhere] lg:break-words">${labelMarkup}</span>
           <span class="shrink-0">${countMarkup}</span>
         </button>
         ${isSelected ? mobileActiveFolderPanelMarkup : ""}
@@ -5209,11 +5413,14 @@ function getItemDisplayName(item) {
   return cleanedName || storedName || "untitled";
 }
 
-function renderItemRows(items, tripId, folderId, view = "archive") {
+function renderItemRows(items, tripId, folderId, view = "archive", options = {}) {
+  const showSourceColumn = Boolean(options.showSourceColumn);
+
   if (items.length === 0) {
     return `
       <tr class="text-stone-300/45 uppercase">
         <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.noObjects}</td>
+        ${showSourceColumn ? `<td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>` : ""}
         <td class="align-middle border-b border-white/8 px-2 py-2.5">----</td>
         <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
         <td class="align-middle border-b border-white/8 px-2 py-2.5">${STRINGS.items.emptyName}</td>
@@ -5233,10 +5440,13 @@ function renderItemRows(items, tripId, folderId, view = "archive") {
           : item.extension || simplifyMimeType(item.mimeType) || "FILE";
       const sourceFolderId = resolveItemSourceFolderId(item, folderId);
       const preview = renderItemPreview(item, tripId, folderId, view, certifiedRow);
+      const source = renderItemSource(tripId, sourceFolderId);
       const author = renderItemAuthor(item);
       const certified = renderItemCertified(item);
       const meta = renderItemMeta(item, tripId, sourceFolderId);
-      const cellBorderClass = "border-b border-white/8";
+      const cellBorderClass = certifiedRow
+        ? "border-b border-transparent"
+        : "border-b border-white/8";
       const nameMarkup =
         item.kind === "text"
           ? `<div class="text-stone-100">${escapeHtml(item.title || item.name)}</div>`
@@ -5245,19 +5455,30 @@ function renderItemRows(items, tripId, folderId, view = "archive") {
             )}" target="_blank" rel="noreferrer">${escapeHtml(displayName)}</a>`;
 
       return `
-        <tr class="transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.012)]" : ""}"${certifiedRow ? ` style="${getCertifiedRowStyle()}"` : ""}>
-          <td class="align-middle min-w-[2.65rem] ${cellBorderClass} px-1 py-1.5 sm:min-w-[3rem] sm:px-1.5 sm:py-2 lg:min-w-[3.4rem]">${preview}</td>
-          <td class="align-middle min-w-[5.5rem] ${cellBorderClass} px-1.5 py-2 sm:min-w-[7rem] sm:px-2 lg:min-w-[9rem]">${nameMarkup}</td>
-          <td class="align-middle min-w-[3.25rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[4rem] sm:px-2 lg:min-w-[4.75rem]">${escapeHtml(
+        <tr class="transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.028)]" : ""}"${certifiedRow ? ` style="${getCertifiedRowStyle()}"` : ""}>
+          <td class="align-middle min-w-[4rem] ${cellBorderClass} px-2 py-2 sm:min-w-[4.5rem] sm:px-2.5 sm:py-2.5">${preview}</td>
+          ${showSourceColumn ? `<td class="align-middle min-w-[7rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-200/82 sm:min-w-[8rem] sm:px-2.5">${source}</td>` : ""}
+          <td class="align-middle min-w-[11rem] ${cellBorderClass} px-2 py-2 sm:min-w-[12rem] sm:px-2.5">${nameMarkup}</td>
+          <td class="align-middle min-w-[5rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[5.5rem] sm:px-2.5">${escapeHtml(
             typeLabel
           )}</td>
-          <td class="align-middle min-w-[4.1rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[5.25rem] sm:px-2 lg:min-w-[6.5rem]">${author}</td>
-          <td class="align-middle min-w-[4.8rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[6rem] sm:px-2 lg:min-w-[7.5rem]">${certified}</td>
-          <td class="align-middle min-w-[6.5rem] ${cellBorderClass} px-1.5 py-2 uppercase text-stone-300/72 sm:min-w-[8rem] sm:px-2 lg:min-w-[10rem]">${meta}</td>
+          <td class="align-middle min-w-[7rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[7.5rem] sm:px-2.5">${author}</td>
+          <td class="align-middle min-w-[8rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[8.5rem] sm:px-2.5">${certified}</td>
+          <td class="align-middle min-w-[12rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[14rem] sm:px-2.5">${meta}</td>
         </tr>
       `;
     })
     .join("");
+}
+
+function renderItemSource(tripId, folderId) {
+  const label = buildItemSourceLabel(tripId, folderId);
+
+  if (!label) {
+    return `<span class="text-stone-300/40">${STRINGS.items.emptyName}</span>`;
+  }
+
+  return `<span class="text-stone-100/86">${escapeHtml(label)}</span>`;
 }
 
 function renderItemCertified(item) {
@@ -5273,8 +5494,8 @@ function renderItemMeta(item, tripId, folderId) {
   const neutralEditButtonClass = "inline-flex border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]";
   const accentMoveButtonClass = "inline-flex border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.08]";
   const accentDeleteButtonClass = "inline-flex border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100";
-  const adminActionButtonClass = "inline-flex border border-amber-300/32 bg-amber-100/[0.03] px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08]";
-  const certifyButtonClass = "inline-flex h-6 w-6 items-center justify-center border border-amber-300/32 bg-amber-100/[0.03] px-0 py-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] leading-none text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08]";
+  const adminActionButtonClass = "inline-flex border border-sky-300/32 bg-sky-100/[0.03] px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08]";
+  const certifyButtonClass = "inline-flex h-6 w-6 items-center justify-center border border-sky-300/32 bg-sky-100/[0.03] px-0 py-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] leading-none text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08]";
   const certifyActiveButtonClass = "inline-flex h-6 w-6 items-center justify-center border border-transparent px-0 py-0 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] leading-none text-amber-50 transition hover:opacity-95";
   const summary =
     item.kind === "text"
@@ -5361,11 +5582,12 @@ function renderItemMeta(item, tripId, folderId) {
 
 function renderItemPreview(item, tripId, folderId, view = "archive", certified = false) {
   const displayName = getItemDisplayName(item);
-  const previewBorderClass = certified ? "border-amber-300/54" : "border-white/20";
-  const previewRingClass = certified ? "ring-1 ring-amber-300/46" : "ring-1 ring-white/18";
+  const previewBorderClass = certified ? "border-transparent" : "border-white/20";
+  const previewRingClass = certified ? "ring-1 ring-amber-200/35" : "ring-1 ring-white/18";
   const previewPanelClass = certified
     ? "bg-[linear-gradient(to_bottom,rgba(78,56,12,0.52),rgba(22,15,5,0.38))]"
     : "bg-[linear-gradient(to_bottom,rgba(255,255,255,0.1),rgba(255,255,255,0.03))]";
+  const previewStyle = certified ? getHighlightButtonStyle(true) : "";
 
   if (item.kind === "text") {
     return `
@@ -5377,6 +5599,7 @@ function renderItemPreview(item, tripId, folderId, view = "archive", certified =
         data-folder-id="${escapeHtml(folderId)}"
         data-item-id="${escapeHtml(item.id)}"
         class="group flex h-9 w-[2.55rem] flex-col justify-between border ${previewBorderClass} ${previewPanelClass} px-1 py-1 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] transition hover:border-white/30 hover:bg-white/[0.08] sm:h-10 sm:w-[2.75rem]"
+        ${previewStyle ? `style="${previewStyle}"` : ""}
         aria-label="Preview ${escapeHtml(displayName)}"
       >
         <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.48rem] uppercase tracking-[0.08em] text-stone-100">TXT</span>
@@ -5387,11 +5610,21 @@ function renderItemPreview(item, tripId, folderId, view = "archive", certified =
 
   if (item.mimeType.startsWith("image/")) {
     return `
-      <a href="${escapeHtml(item.downloadURL)}" target="_blank" rel="noreferrer" class="inline-block border ${previewBorderClass} ${previewPanelClass} p-[1px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+      <button
+        type="button"
+        data-action="preview-media"
+        data-view="${escapeHtml(view)}"
+        data-trip-id="${escapeHtml(tripId)}"
+        data-folder-id="${escapeHtml(folderId)}"
+        data-item-id="${escapeHtml(item.id)}"
+        class="group relative inline-block border ${previewBorderClass} ${previewPanelClass} p-[1px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] transition hover:opacity-90"
+        ${previewStyle ? `style="${previewStyle}"` : ""}
+        aria-label="Preview ${escapeHtml(displayName)}"
+      >
         <img src="${escapeHtml(item.downloadURL)}" alt="${escapeHtml(
       displayName
-    )}" class="h-9 w-[2.55rem] object-cover ${previewRingClass} sm:h-10 sm:w-[2.75rem]">
-      </a>
+    )}" class="h-11 w-[3.35rem] object-cover ${previewRingClass} sm:h-12 sm:w-[3.6rem]">
+      </button>
     `;
   }
 
@@ -5400,17 +5633,18 @@ function renderItemPreview(item, tripId, folderId, view = "archive", certified =
       return `
         <button
           type="button"
-          data-action="preview-video"
+          data-action="preview-media"
           data-view="${escapeHtml(view)}"
           data-trip-id="${escapeHtml(tripId)}"
           data-folder-id="${escapeHtml(folderId)}"
           data-item-id="${escapeHtml(item.id)}"
           class="group relative inline-block border ${previewBorderClass} ${previewPanelClass} p-[1px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] transition hover:opacity-90"
+          ${previewStyle ? `style="${previewStyle}"` : ""}
           aria-label="Preview ${escapeHtml(displayName)}"
         >
           <img src="${escapeHtml(item.posterDownloadURL)}" alt="${escapeHtml(
         displayName
-      )}" class="block h-9 w-[2.55rem] overflow-hidden object-cover ${previewRingClass} sm:h-10 sm:w-[2.75rem]">
+      )}" class="block h-11 w-[3.35rem] overflow-hidden object-cover ${previewRingClass} sm:h-12 sm:w-[3.6rem]">
           <span class="pointer-events-none absolute inset-0 flex items-center justify-center">
             <span class="flex h-[1.125rem] w-[1.125rem] items-center justify-center rounded-full border border-white/24 bg-black/62 text-[0.38rem] text-white/90 sm:h-5 sm:w-5 sm:text-[0.42rem]">
               &#9654;
@@ -5423,12 +5657,13 @@ function renderItemPreview(item, tripId, folderId, view = "archive", certified =
     return `
       <button
         type="button"
-        data-action="preview-video"
+        data-action="preview-media"
         data-view="${escapeHtml(view)}"
         data-trip-id="${escapeHtml(tripId)}"
         data-folder-id="${escapeHtml(folderId)}"
         data-item-id="${escapeHtml(item.id)}"
-        class="inline-flex h-9 w-[2.55rem] items-center justify-center border ${previewBorderClass} ${certified ? "bg-[rgba(62,46,12,0.44)]" : "bg-[rgba(255,255,255,0.08)]"} text-[0.44rem] uppercase tracking-[0.06em] text-stone-300/72 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] transition hover:border-white/25 hover:text-stone-100 sm:h-10 sm:w-[2.75rem] sm:text-[0.5rem]"
+        class="inline-flex h-11 w-[3.35rem] items-center justify-center border ${previewBorderClass} ${certified ? "bg-[rgba(62,46,12,0.44)]" : "bg-[rgba(255,255,255,0.08)]"} text-[0.52rem] uppercase tracking-[0.06em] text-stone-300/72 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] transition hover:border-white/25 hover:text-stone-100 sm:h-12 sm:w-[3.6rem] sm:text-[0.58rem]"
+        ${previewStyle ? `style="${previewStyle}"` : ""}
         aria-label="Preview ${escapeHtml(displayName)}"
       >
         &#9654;
@@ -5673,9 +5908,8 @@ function getSelectedFolderId(tripId, view = "archive", fallbackFolders = null) {
     return "";
   }
 
-  const defaultFolderId = folders[0]?.id || "";
-  selectionMap.set(selectionKey, defaultFolderId);
-  return defaultFolderId;
+  selectionMap.set(selectionKey, "");
+  return "";
 }
 
 function setSelectedFolderId(tripId, folderId, view = "archive") {
@@ -5772,7 +6006,11 @@ function getItemsForFolder(tripId, folderId) {
           }
 
           seenItems.add(itemKey);
-          aggregatedItems.push(item);
+          aggregatedItems.push({
+            ...item,
+            sourceFolderId,
+            folderId: sourceFolderId,
+          });
         });
       });
 
@@ -5988,7 +6226,7 @@ function getFolderDisplaySlug(folder) {
   }
 
   return isHighlightFolder(folder)
-    ? HIGHLIGHT_FOLDER_LABEL
+    ? HIGHLIGHT_FOLDER_DISPLAY_LABEL
     : String(folder.slug || folder.id || "");
 }
 
@@ -6008,12 +6246,24 @@ function getHighlightButtonStyle(isSelected = false) {
   return `border-color:transparent;background-image:linear-gradient(${fill}),linear-gradient(135deg,#fff7be 0%,#ffe063 34%,#ffc021 68%,#7f5000 100%);background-origin:border-box;background-clip:padding-box,border-box;box-shadow:${isSelected ? "0 0 22px rgba(255,199,58,0.12)" : "inset 0 0 0 1px rgba(255,225,122,0.08)"};`;
 }
 
+function getFocusedFolderButtonStyle() {
+  return "box-shadow:inset 0 0 0 2px rgba(0,0,0,0.86),inset 0 0 0 3px rgba(255,255,255,0.16),0 0 18px rgba(255,255,255,0.1);";
+}
+
+function getHighlightFolderButtonStyle(isSelected = false) {
+  if (!isSelected) {
+    return getHighlightButtonStyle(false);
+  }
+
+  return "border-color:transparent;background-image:linear-gradient(135deg,#fff8cb 0%,#ffe57c 32%,#ffc93a 66%,#b77800 100%),linear-gradient(135deg,#fff7be 0%,#ffe063 34%,#ffc021 68%,#7f5000 100%);background-origin:border-box;background-clip:padding-box,border-box;box-shadow:inset 0 0 0 2px rgba(0,0,0,0.86),inset 0 0 0 3px rgba(255,248,203,0.22),0 0 22px rgba(255,199,58,0.18);";
+}
+
 function getHighlightPanelStyle() {
   return "border-color:transparent;background-image:linear-gradient(rgba(9,9,9,0.972),rgba(5,5,5,0.962)),linear-gradient(135deg,rgba(233,211,132,0.58) 0%,rgba(198,151,55,0.56) 48%,rgba(122,86,18,0.66) 100%);background-origin:border-box;background-clip:padding-box,border-box;box-shadow:inset 0 0 0 1px rgba(255,225,122,0.022),0 0 12px rgba(255,191,31,0.025);";
 }
 
 function getCertifiedRowStyle() {
-  return "background-color:rgba(255,221,138,0.014);";
+  return "background-color:rgba(255,221,138,0.028);";
 }
 
 function isItemCertified(item) {
@@ -6021,7 +6271,18 @@ function isItemCertified(item) {
 }
 
 function resolveItemSourceFolderId(item, fallbackFolderId = "") {
-  return String(item?.folderId || fallbackFolderId || "");
+  return String(item?.sourceFolderId || item?.folderId || fallbackFolderId || "");
+}
+
+function buildItemSourceLabel(tripId, folderId) {
+  const trip = trips.find((item) => item.id === tripId);
+  const folder = getFoldersForTrip(tripId).find((item) => item.id === folderId);
+
+  if (!trip || !folder || isHighlightFolder(folder)) {
+    return "";
+  }
+
+  return `${String(trip.slug || trip.id || "").toUpperCase()}/${getFolderDisplaySlug(folder).toUpperCase()}`;
 }
 
 function buildFolderPathLabel(trip, folder) {
@@ -6140,6 +6401,7 @@ function normalizeItem(item) {
     createdByUid: String(item?.createdByUid || ""),
     tripId: String(item?.tripId || ""),
     folderId: String(item?.folderId || ""),
+    sourceFolderId: String(item?.sourceFolderId || item?.folderId || ""),
     createdAtMs,
   };
 }
@@ -6282,7 +6544,7 @@ function renderFriendControls(friend, canDeleteProfile) {
               type="button"
               data-action="delete-profile"
               data-user-id="${escapeHtml(friend.uid || friend.id)}"
-              class="border border-amber-300/32 bg-amber-100/[0.03] px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08] xl:px-1.5 xl:py-0.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-1 min-[1920px]:text-[0.58rem]"
+              class="border border-sky-300/32 bg-sky-100/[0.03] px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08] xl:px-1.5 xl:py-0.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-1 min-[1920px]:text-[0.58rem]"
             >
               ${STRINGS.members.deleteProfile}
             </button>
@@ -6307,7 +6569,7 @@ function renderRoleSelect(friend) {
       data-action="role-select"
       data-user-id="${escapeHtml(friend.uid || friend.id)}"
       ${roleLocked ? "disabled" : ""}
-      class="border border-amber-300/28 bg-amber-100/[0.04] px-2 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-amber-100 outline-none transition focus:border-amber-200/55 xl:px-1.5 xl:py-1.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-2 min-[1920px]:text-[0.58rem]"
+      class="border border-sky-300/28 bg-sky-100/[0.04] px-2 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-sky-100 outline-none transition focus:border-sky-200/55 xl:px-1.5 xl:py-1.5 xl:text-[0.52rem] min-[1920px]:px-2 min-[1920px]:py-2 min-[1920px]:text-[0.58rem]"
     >
       ${options.join("")}
     </select>
@@ -6522,7 +6784,7 @@ function upsertHighlightFolderInState(tripId) {
       {
         id: HIGHLIGHT_FOLDER_ID,
         slug: HIGHLIGHT_FOLDER_ID,
-        label: HIGHLIGHT_FOLDER_LABEL,
+        label: HIGHLIGHT_FOLDER_DISPLAY_LABEL,
         kind: "highlight",
         sortOrder: getHighlightFolderSortOrder(tripId),
       },

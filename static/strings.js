@@ -111,6 +111,7 @@ export const STRINGS = {
     nameColumn: "Name",
     typeColumn: "Type",
     previewColumn: "Preview",
+    sourceColumn: "SOURCE",
     authorColumn: "Author",
     certifiedColumn: "CERTIFIED",
     metaColumn: "Meta",

@@ -212,6 +212,75 @@
       flex-shrink: 0;
     }
 
+    .highlight-folder-button {
+      position: relative;
+      transform: translate3d(0, 0, 0);
+      transition:
+        transform 180ms ease,
+        filter 180ms ease,
+        box-shadow 180ms ease,
+        border-color 180ms ease;
+    }
+
+    .highlight-folder-button:hover,
+    .highlight-folder-button:focus-visible {
+      transform: translate3d(0, -1px, 0);
+      filter: saturate(1.18) brightness(1.06);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 232, 142, 0.11),
+        0 0 22px rgba(255, 207, 64, 0.11);
+      outline: none;
+    }
+
+    @media (max-width: 1023.98px) {
+      .mobile-trip-open {
+        animation: mobile-trip-open 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        transform-origin: top;
+        will-change: opacity, transform, clip-path;
+      }
+
+      .mobile-folder-open {
+        animation: mobile-folder-open 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        transform-origin: top;
+        will-change: opacity, transform, clip-path;
+      }
+    }
+
+    @media (max-width: 1023.98px) and (prefers-reduced-motion: reduce) {
+      .mobile-trip-open,
+      .mobile-folder-open {
+        animation: none;
+      }
+    }
+
+    @keyframes mobile-trip-open {
+      0% {
+        clip-path: inset(0 0 100% 0);
+        opacity: 0;
+        transform: translate3d(0, -8px, 0);
+      }
+
+      100% {
+        clip-path: inset(0 0 0 0);
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+      }
+    }
+
+    @keyframes mobile-folder-open {
+      0% {
+        clip-path: inset(0 0 100% 0);
+        opacity: 0;
+        transform: translate3d(0, -6px, 0);
+      }
+
+      100% {
+        clip-path: inset(0 0 0 0);
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+      }
+    }
+
     @keyframes site-footer-ticker-scroll {
       0% {
         transform: translate3d(0, 0, 0);
@@ -284,7 +353,7 @@
               <span id="banner-admin-panels-toggle-text">Show Admin Panels</span>
               <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
                 <input id="banner-admin-panels-toggle" type="checkbox" class="peer sr-only">
-                <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-amber-200"></span>
+                <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
               </span>
             </label>
 
@@ -374,7 +443,7 @@
                 <span id="admin-panels-toggle-text">Show Admin Panels</span>
                 <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
                   <input id="admin-panels-toggle" type="checkbox" class="peer sr-only">
-                  <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-amber-200"></span>
+                  <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
                 </span>
               </label>
               <button id="desktop-route-toggle-link" type="button" class="hidden w-full justify-center border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] xl:w-40">
@@ -399,17 +468,17 @@
       <div class="mt-4 grid gap-6 sm:mt-6 xl:grid-cols-[minmax(0,4fr)_minmax(15rem,1fr)] xl:items-start min-[1920px]:grid-cols-[minmax(0,1fr)_420px]">
         <div class="min-w-0">
       <div id="desktop-control-panel-slot" class="space-y-4">
-      <details id="admin-panel" class="hidden border border-dashed border-amber-300/70 bg-amber-100/[0.04] shadow-[inset_0_0_0_1px_rgba(251,191,36,0.08)] group">
+      <details id="admin-panel" class="hidden border border-dashed border-sky-200/70 bg-sky-100/[0.04] shadow-[inset_0_0_0_1px_rgba(186,230,253,0.08)] group">
         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 sm:px-5 sm:py-5">
-          <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-amber-100/78">
+          <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-sky-100/78">
             Admin Tools
           </p>
-          <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.22em] text-amber-100/62">
+          <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.22em] text-sky-100/62">
             Menu
           </span>
         </summary>
 
-        <div class="border-t border-amber-200/18 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
+        <div class="border-t border-sky-200/18 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
         <div class="grid gap-5 2xl:grid-cols-2">
           <form id="featured-message-form" class="space-y-4 border border-white/10 p-4">
             <p id="featured-message-form-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-300/65">
@@ -421,7 +490,7 @@
               <textarea id="featured-message-input" name="featuredMessage" rows="3" maxlength="180" placeholder="2026 LOADING.." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
             </label>
 
-            <button id="featured-message-submit" type="submit" class="w-full border border-amber-300/32 bg-amber-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08]">
+            <button id="featured-message-submit" type="submit" class="w-full border border-sky-300/32 bg-sky-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08]">
               Save Featured Message
             </button>
           </form>
@@ -446,7 +515,7 @@
               <input id="trip-folders-input" name="tripFolders" maxlength="120" placeholder="thu,fri,sat,sun,mon,movie" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35">
             </label>
 
-            <button type="submit" class="w-full border border-amber-300/32 bg-amber-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08]">
+            <button type="submit" class="w-full border border-sky-300/32 bg-sky-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08]">
               Create Trip
             </button>
           </form>
@@ -466,7 +535,7 @@
               <input id="folder-name-input" name="folderLabel" maxlength="24" placeholder="fri" class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm lowercase tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35" required>
             </label>
 
-            <button type="submit" class="w-full border border-amber-300/32 bg-amber-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-amber-100 transition hover:border-amber-200/55 hover:bg-amber-100/[0.08]">
+            <button type="submit" class="w-full border border-sky-300/32 bg-sky-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08]">
               Create Folder
             </button>
           </form>
@@ -602,21 +671,24 @@
             <span class="site-footer-ticker-segment" aria-hidden="true">100GIGZ - ARCHIVE - LOADING</span>
           </div>
         </div>
+        <p class="mt-3 px-4 text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-400/70 sm:mt-4">
+          &copy; 100GIGZ 2021
+        </p>
       </footer>
 
       <div id="edit-post-modal" class="fixed inset-0 z-50 hidden items-end justify-center overflow-y-auto p-2 sm:items-center sm:p-6">
         <div id="edit-post-backdrop" class="absolute inset-0 bg-black/72 backdrop-blur-sm"></div>
 
-        <form id="edit-post-form" class="relative flex w-full max-w-3xl max-h-[calc(100vh-1rem)] flex-col overflow-hidden border border-orange-300/45 bg-[linear-gradient(to_bottom,rgba(58,24,6,0.94),rgba(18,10,5,0.98))] shadow-[0_24px_96px_rgba(0,0,0,0.58)] sm:max-h-[calc(100vh-3rem)]">
-          <div class="shrink-0 flex flex-col gap-3 border-b border-orange-200/16 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
+        <form id="edit-post-form" class="relative flex w-full max-w-3xl max-h-[calc(100vh-1rem)] flex-col overflow-hidden border border-sky-200/45 bg-[linear-gradient(to_bottom,rgba(14,42,58,0.94),rgba(5,14,18,0.98))] shadow-[0_24px_96px_rgba(0,0,0,0.58)] sm:max-h-[calc(100vh-3rem)]">
+          <div class="shrink-0 flex flex-col gap-3 border-b border-sky-200/16 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:py-5">
             <div class="min-w-0">
-              <p id="edit-post-form-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-orange-100/82">
+              <p id="edit-post-form-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-sky-100/82">
                 Edit Text Post
               </p>
               <p id="edit-post-context" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/64">
               </p>
             </div>
-            <button id="edit-post-close-button" type="button" class="border border-orange-300/28 bg-orange-100/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-orange-100/84 transition hover:border-orange-200/48 hover:bg-orange-100/[0.08]">
+            <button id="edit-post-close-button" type="button" class="border border-sky-300/28 bg-sky-100/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-sky-100/84 transition hover:border-sky-200/48 hover:bg-sky-100/[0.08]">
               Cancel Edit
             </button>
           </div>
@@ -624,37 +696,37 @@
           <div class="min-h-0 overflow-y-auto space-y-4 px-4 py-4 sm:px-6 sm:py-6">
             <label id="edit-post-alias-shell" class="hidden block">
               <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Author Alias</span>
-              <select id="edit-post-author-mode-select" name="authorMode" class="w-full border border-orange-300/24 bg-orange-950/45 px-3 py-3 text-sm uppercase tracking-[0.16em] text-stone-100 outline-none transition focus:border-orange-200/48"></select>
+              <select id="edit-post-author-mode-select" name="authorMode" class="w-full border border-sky-300/24 bg-sky-950/45 px-3 py-3 text-sm uppercase tracking-[0.16em] text-stone-100 outline-none transition focus:border-sky-200/48"></select>
             </label>
 
             <p id="edit-post-file-name" class="hidden font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/62"></p>
 
             <label id="edit-post-media-name-shell" class="hidden block">
               <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Media Name</span>
-              <input id="edit-post-media-name-input" name="mediaName" maxlength="120" placeholder="CLIP-01.MP4" class="w-full border border-orange-300/24 bg-orange-950/45 px-3 py-3 text-sm tracking-[0.1em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-orange-200/48">
+              <input id="edit-post-media-name-input" name="mediaName" maxlength="120" placeholder="CLIP-01.MP4" class="w-full border border-sky-300/24 bg-sky-950/45 px-3 py-3 text-sm tracking-[0.1em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-sky-200/48">
             </label>
 
             <label id="edit-post-title-shell" class="block">
               <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Post title</span>
-              <input id="edit-post-title-input" name="title" maxlength="60" placeholder="DAY NOTES" class="w-full border border-orange-300/24 bg-orange-950/45 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-orange-200/48" required>
+              <input id="edit-post-title-input" name="title" maxlength="60" placeholder="DAY NOTES" class="w-full border border-sky-300/24 bg-sky-950/45 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-sky-200/48" required>
             </label>
 
             <label id="edit-post-description-shell" class="hidden block">
               <span id="edit-post-description-label" class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Description</span>
-              <textarea id="edit-post-description-input" name="description" rows="4" maxlength="800" placeholder="OPTIONAL DESCRIPTION..." class="w-full resize-y border border-orange-300/24 bg-orange-950/45 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-orange-200/48"></textarea>
+              <textarea id="edit-post-description-input" name="description" rows="4" maxlength="800" placeholder="OPTIONAL DESCRIPTION..." class="w-full resize-y border border-sky-300/24 bg-sky-950/45 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-sky-200/48"></textarea>
             </label>
 
             <label id="edit-post-body-shell" class="block">
               <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Body</span>
-              <textarea id="edit-post-body-input" name="body" rows="8" maxlength="8000" placeholder="POST BODY..." class="w-full resize-y border border-orange-300/24 bg-orange-950/45 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-orange-200/48" required></textarea>
+              <textarea id="edit-post-body-input" name="body" rows="8" maxlength="8000" placeholder="POST BODY..." class="w-full resize-y border border-sky-300/24 bg-sky-950/45 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-sky-200/48" required></textarea>
             </label>
           </div>
 
-          <div class="shrink-0 flex flex-col gap-3 border-t border-orange-200/16 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
-            <button id="edit-post-cancel-button" type="button" class="w-full border border-orange-300/28 bg-orange-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-orange-100/84 transition hover:border-orange-200/48 hover:bg-orange-100/[0.08] sm:w-auto sm:min-w-44">
+          <div class="shrink-0 flex flex-col gap-3 border-t border-sky-200/16 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
+            <button id="edit-post-cancel-button" type="button" class="w-full border border-sky-300/28 bg-sky-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100/84 transition hover:border-sky-200/48 hover:bg-sky-100/[0.08] sm:w-auto sm:min-w-44">
               Cancel Edit
             </button>
-            <button id="edit-post-save-button" type="submit" class="w-full border border-orange-300/36 bg-orange-100/[0.05] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-orange-100 transition hover:border-orange-200/52 hover:bg-orange-100/[0.1] sm:w-auto sm:min-w-44">
+            <button id="edit-post-save-button" type="submit" class="w-full border border-sky-300/36 bg-sky-100/[0.05] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100 transition hover:border-sky-200/52 hover:bg-sky-100/[0.1] sm:w-auto sm:min-w-44">
               Save Changes
             </button>
           </div>
@@ -664,16 +736,16 @@
       <div id="move-item-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6">
         <div id="move-item-backdrop" class="absolute inset-0 bg-black/72 backdrop-blur-sm"></div>
 
-        <form id="move-item-form" class="relative w-full max-w-2xl border border-orange-300/38 bg-[linear-gradient(to_bottom,rgba(54,24,8,0.94),rgba(16,10,5,0.98))] shadow-[0_24px_96px_rgba(0,0,0,0.58)]">
-          <div class="flex flex-col gap-3 border-b border-orange-200/16 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+        <form id="move-item-form" class="relative w-full max-w-2xl border border-sky-300/38 bg-[linear-gradient(to_bottom,rgba(14,42,58,0.94),rgba(5,14,18,0.98))] shadow-[0_24px_96px_rgba(0,0,0,0.58)]">
+          <div class="flex flex-col gap-3 border-b border-sky-200/16 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
             <div class="min-w-0">
-              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-orange-100/82">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-sky-100/82">
                 Move Item
               </p>
               <p id="move-item-title" class="mt-2 break-words text-lg uppercase tracking-[0.14em] text-stone-100 sm:text-xl"></p>
               <p id="move-item-context" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/64"></p>
             </div>
-            <button id="move-item-close-button" type="button" class="border border-orange-300/28 bg-orange-100/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-orange-100/84 transition hover:border-orange-200/48 hover:bg-orange-100/[0.08]">
+            <button id="move-item-close-button" type="button" class="border border-sky-300/28 bg-sky-100/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-sky-100/84 transition hover:border-sky-200/48 hover:bg-sky-100/[0.08]">
               Cancel Move
             </button>
           </div>
@@ -681,15 +753,15 @@
           <div class="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
             <label class="block">
               <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-300/70">Destination Folder</span>
-              <select id="move-item-folder-select" name="folderId" class="w-full border border-orange-300/24 bg-orange-950/45 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition focus:border-orange-200/48" required></select>
+              <select id="move-item-folder-select" name="folderId" class="w-full border border-sky-300/24 bg-sky-950/45 px-3 py-3 text-sm uppercase tracking-[0.14em] text-stone-100 outline-none transition focus:border-sky-200/48" required></select>
             </label>
           </div>
 
-          <div class="flex flex-col gap-3 border-t border-orange-200/16 px-5 py-5 sm:flex-row sm:justify-end sm:px-6">
-            <button id="move-item-cancel-button" type="button" class="w-full border border-orange-300/28 bg-orange-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-orange-100/84 transition hover:border-orange-200/48 hover:bg-orange-100/[0.08] sm:w-auto sm:min-w-44">
+          <div class="flex flex-col gap-3 border-t border-sky-200/16 px-5 py-5 sm:flex-row sm:justify-end sm:px-6">
+            <button id="move-item-cancel-button" type="button" class="w-full border border-sky-300/28 bg-sky-100/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100/84 transition hover:border-sky-200/48 hover:bg-sky-100/[0.08] sm:w-auto sm:min-w-44">
               Cancel Move
             </button>
-            <button id="move-item-submit-button" type="submit" class="w-full border border-orange-300/36 bg-orange-100/[0.05] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-orange-100 transition hover:border-orange-200/52 hover:bg-orange-100/[0.1] sm:w-auto sm:min-w-44">
+            <button id="move-item-submit-button" type="submit" class="w-full border border-sky-300/36 bg-sky-100/[0.05] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-sky-100 transition hover:border-sky-200/52 hover:bg-sky-100/[0.1] sm:w-auto sm:min-w-44">
               Move Item
             </button>
           </div>
@@ -711,17 +783,20 @@
           </div>
 
           <div class="px-4 py-4 sm:px-6 sm:py-6">
-            <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
               <button id="video-preview-prev-button" type="button" class="shrink-0 border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35">
                 &larr; Prev
               </button>
-              <div class="min-w-0 flex-1"></div>
+              <button id="video-preview-certify-button" type="button" class="hidden shrink-0 border border-sky-300/32 bg-sky-100/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-sky-100 transition hover:border-sky-200/55 hover:bg-sky-100/[0.08] disabled:cursor-not-allowed disabled:opacity-40">
+                Certify
+              </button>
               <button id="video-preview-next-button" type="button" class="shrink-0 border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35">
                 Next &rarr;
               </button>
             </div>
             <div id="video-preview-frame" class="border border-white/12 bg-black/70 p-1.5 sm:p-2">
               <video id="video-preview-player" class="max-h-[78vh] w-full bg-black" controls autoplay playsinline preload="metadata"></video>
+              <img id="video-preview-image" alt="" class="hidden max-h-[78vh] w-full bg-black object-contain">
             </div>
           </div>
         </div>
