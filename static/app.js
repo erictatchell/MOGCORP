@@ -136,6 +136,12 @@ const profileRouteInput = document.getElementById("profile-route-input");
 const profileDetailsSubmit = document.getElementById("profile-details-submit");
 const profileEmptyState = document.getElementById("profile-empty-state");
 const profileTripList = document.getElementById("profile-trip-list");
+const profileActivityForm = document.getElementById("profile-activity-form");
+const profileActivityBodyInput = document.getElementById("profile-activity-body");
+const profileActivityImageInput = document.getElementById("profile-activity-image");
+const profileActivitySubmit = document.getElementById("profile-activity-submit");
+const profileActivityStatus = document.getElementById("profile-activity-status");
+const profileActivityList = document.getElementById("profile-activity-list");
 
 const tripForm = document.getElementById("trip-form");
 const folderForm = document.getElementById("folder-form");
@@ -201,6 +207,12 @@ const videoPreviewImage = document.getElementById("video-preview-image");
 const videoPreviewPrevButton = document.getElementById("video-preview-prev-button");
 const videoPreviewNextButton = document.getElementById("video-preview-next-button");
 const videoPreviewCertifyButton = document.getElementById("video-preview-certify-button");
+const videoPreviewCommentForm = document.getElementById("video-preview-comment-form");
+const videoPreviewCommentBodyInput = document.getElementById("video-preview-comment-body");
+const videoPreviewCommentImageInput = document.getElementById("video-preview-comment-image");
+const videoPreviewCommentSubmit = document.getElementById("video-preview-comment-submit");
+const videoPreviewCommentStatus = document.getElementById("video-preview-comment-status");
+const videoPreviewCommentsList = document.getElementById("video-preview-comments-list");
 const contributeModal = document.getElementById("contribute-modal");
 const contributeBackdrop = document.getElementById("contribute-backdrop");
 const contributeCloseButton = document.getElementById("contribute-close-button");
@@ -233,6 +245,7 @@ const HIGHLIGHT_FOLDER_ID = slugifyFolder(HIGHLIGHT_FOLDER_LABEL);
 const MAX_VIDEO_UPLOADS_PER_DAY = 10;
 const MAX_VIDEO_SIZE_BYTES = 500 * 1024 * 1024;
 const MAX_PROFILE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_SOCIAL_BODY_LENGTH = 600;
 const ITEM_SORT_MEDIA_DATE_DESC = "media-date-desc";
 const ITEM_SORT_MEDIA_DATE_ASC = "media-date-asc";
 const ITEM_SORT_RECENTLY_ADDED = "recently-added";
@@ -273,6 +286,13 @@ let currentVideoPreviewContext = null;
 let currentItemMove = null;
 let currentContributionContext = null;
 let currentTextPreviewContext = null;
+let currentSocialCommentEditId = "";
+let currentMediaCommentsKey = "";
+let mediaCommentsUnsubscribe = null;
+let mediaCommentsByKey = new Map();
+let currentProfileActivityUid = "";
+let profileActivityUnsubscribe = null;
+let profileActivityByUser = new Map();
 let profileSelectedFolders = new Map();
 let currentRoute = normalizeRoute(window.location.pathname);
 let featuredMessage = DEFAULT_FEATURED_MESSAGE;
@@ -983,6 +1003,9 @@ function initializeAuthListener() {
       resetContributeDialog();
       resetTextPreview();
       resetItemMoveDialog();
+      resetSocialCommentEdit();
+      syncVideoPreviewComments(getCurrentVideoPreviewState());
+      syncProfileActivitySubscription("");
       adminPanelsVisible = false;
       setMobileMenuOpen(false);
       if (currentRoute?.kind === ROUTE_PROFILE_SELF) {
@@ -1019,6 +1042,7 @@ function setupForms() {
   moveItemForm?.addEventListener("submit", handleMoveItemSubmit);
   profileImageForm?.addEventListener("submit", handleProfileImageSubmit);
   profileDetailsForm?.addEventListener("submit", handleProfileDetailsSubmit);
+  profileActivityForm?.addEventListener("submit", handleProfileActivitySubmit);
   editPostCloseButton?.addEventListener("click", resetTextPostEditor);
   editPostCancelButton?.addEventListener("click", resetTextPostEditor);
   editPostBackdrop?.addEventListener("click", resetTextPostEditor);
@@ -1030,6 +1054,9 @@ function setupForms() {
   videoPreviewPrevButton?.addEventListener("click", () => navigateVideoPreview(-1));
   videoPreviewNextButton?.addEventListener("click", () => navigateVideoPreview(1));
   videoPreviewCertifyButton?.addEventListener("click", handleVideoPreviewCertifiedToggleClick);
+  videoPreviewCommentForm?.addEventListener("submit", handleVideoPreviewCommentSubmit);
+  videoPreviewCommentsList?.addEventListener("click", handleSocialCommentActionClick);
+  videoPreviewCommentsList?.addEventListener("submit", handleSocialCommentEditSubmit);
   contributeCloseButton?.addEventListener("click", resetContributeDialog);
   contributeBackdrop?.addEventListener("click", resetContributeDialog);
   contributeModal?.addEventListener("click", handleContributeModalClick);
@@ -1048,6 +1075,8 @@ function setupForms() {
   textTripSelect?.addEventListener("change", renderAdminSelects);
   uploadFilesInput?.addEventListener("change", handleUploadFilesSelectionChange);
   profileRouteInput?.addEventListener("input", handleProfileRouteInput);
+  profileActivityList?.addEventListener("click", handleSocialCommentActionClick);
+  profileActivityList?.addEventListener("submit", handleSocialCommentEditSubmit);
   profileTripList?.addEventListener("click", handleProfileTripBrowserClick);
   profileTripList?.addEventListener("change", handleProfileTripBrowserChange);
   friendsDesktopList?.addEventListener("change", handleRoleSelectChange);
@@ -1833,6 +1862,349 @@ async function handleProfileImageSubmit(event) {
     authDetail.textContent = getFriendlyStorageMessage(error);
   } finally {
     profileImageSubmit?.toggleAttribute("disabled", false);
+  }
+}
+
+async function handleVideoPreviewCommentSubmit(event) {
+  event.preventDefault();
+
+  const previewState = getCurrentVideoPreviewState();
+  const context = buildMediaCommentContext(previewState);
+
+  if (!context || !db || !currentUser?.uid || !canUploadMedia()) {
+    setVideoPreviewCommentStatus("SIGN IN TO COMMENT.");
+    return;
+  }
+
+  const body = normalizeSocialBody(videoPreviewCommentBodyInput?.value);
+  const attachmentFile = videoPreviewCommentImageInput?.files?.[0] || null;
+
+  if (!body && !attachmentFile) {
+    setVideoPreviewCommentStatus("ADD TEXT OR IMAGE.");
+    return;
+  }
+
+  videoPreviewCommentSubmit?.toggleAttribute("disabled", true);
+  setVideoPreviewCommentStatus("POSTING COMMENT.");
+
+  try {
+    const attachment = await uploadSocialAttachment(attachmentFile, "media-comment");
+    const commentId = `comment-${buildUniqueStamp()}`;
+    const actor = buildActivityActorFields();
+    const createdAtMs = Date.now();
+    const commentRef = doc(
+      db,
+      runtimeConfig.collections.trips,
+      context.tripId,
+      "folders",
+      context.folderId,
+      "items",
+      context.itemId,
+      "comments",
+      commentId
+    );
+    const activityRef = doc(
+      db,
+      runtimeConfig.collections.users,
+      currentUser.uid,
+      "activity",
+      commentId
+    );
+    const sharedFields = {
+      body,
+      attachmentURL: attachment.attachmentURL,
+      attachmentStoragePath: attachment.attachmentStoragePath,
+      attachmentMimeType: attachment.attachmentMimeType,
+      attachmentName: attachment.attachmentName,
+      tripId: context.tripId,
+      folderId: context.folderId,
+      itemId: context.itemId,
+      itemName: context.itemName,
+      sourceLabel: context.sourceLabel,
+      createdAt: serverTimestamp(),
+      createdAtMs,
+      updatedAt: serverTimestamp(),
+    };
+    const batch = writeBatch(db);
+
+    batch.set(commentRef, {
+      id: commentId,
+      type: "media-comment",
+      authorUid: actor.actorUid,
+      authorLabel: actor.actorLabel,
+      authorRouteId: actor.actorRouteId,
+      authorPhotoURL: actor.actorPhotoURL,
+      ...sharedFields,
+    });
+
+    batch.set(activityRef, {
+      id: commentId,
+      type: "media-comment",
+      actorUid: actor.actorUid,
+      actorLabel: actor.actorLabel,
+      actorRouteId: actor.actorRouteId,
+      actorPhotoURL: actor.actorPhotoURL,
+      targetUserUid: currentUser.uid,
+      targetUserLabel: actor.actorLabel,
+      ...sharedFields,
+    });
+
+    await batch.commit();
+    videoPreviewCommentForm?.reset();
+    setVideoPreviewCommentStatus("COMMENT POSTED.");
+  } catch (error) {
+    setVideoPreviewCommentStatus(getErrorMessage(error, "Could not post comment.").toUpperCase());
+  } finally {
+    videoPreviewCommentSubmit?.toggleAttribute("disabled", false);
+  }
+}
+
+async function handleProfileActivitySubmit(event) {
+  event.preventDefault();
+
+  const profileView = getActiveProfileView();
+  const targetFriend = profileView?.state === "ready" ? profileView.friend : null;
+
+  if (!targetFriend?.uid || !db || !currentUser?.uid || !canUploadMedia()) {
+    setProfileActivityStatus("SIGN IN TO POST.");
+    return;
+  }
+
+  const body = normalizeSocialBody(profileActivityBodyInput?.value);
+  const attachmentFile = profileActivityImageInput?.files?.[0] || null;
+
+  if (!body && !attachmentFile) {
+    setProfileActivityStatus("ADD TEXT OR IMAGE.");
+    return;
+  }
+
+  profileActivitySubmit?.toggleAttribute("disabled", true);
+  setProfileActivityStatus("POSTING TO WALL.");
+
+  try {
+    const attachment = await uploadSocialAttachment(attachmentFile, "wall-post");
+    const activityId = `wall-${buildUniqueStamp()}`;
+    const actor = buildActivityActorFields();
+    const activityRef = doc(
+      db,
+      runtimeConfig.collections.users,
+      targetFriend.uid,
+      "activity",
+      activityId
+    );
+    const activityDoc = {
+      id: activityId,
+      type: "wall-post",
+      body,
+      actorUid: actor.actorUid,
+      actorLabel: actor.actorLabel,
+      actorRouteId: actor.actorRouteId,
+      actorPhotoURL: actor.actorPhotoURL,
+      targetUserUid: targetFriend.uid,
+      targetUserLabel: getFriendLabel(targetFriend),
+      attachmentURL: attachment.attachmentURL,
+      attachmentStoragePath: attachment.attachmentStoragePath,
+      attachmentMimeType: attachment.attachmentMimeType,
+      attachmentName: attachment.attachmentName,
+      createdAt: serverTimestamp(),
+      createdAtMs: Date.now(),
+      updatedAt: serverTimestamp(),
+    };
+    const batch = writeBatch(db);
+
+    batch.set(activityRef, activityDoc);
+
+    if (targetFriend.uid !== currentUser.uid) {
+      batch.set(
+        doc(db, runtimeConfig.collections.users, currentUser.uid, "activity", activityId),
+        activityDoc
+      );
+    }
+
+    await batch.commit();
+
+    profileActivityForm?.reset();
+    setProfileActivityStatus("WALL POSTED.");
+  } catch (error) {
+    setProfileActivityStatus(getErrorMessage(error, "Could not post to wall.").toUpperCase());
+  } finally {
+    profileActivitySubmit?.toggleAttribute("disabled", false);
+  }
+}
+
+function handleSocialCommentActionClick(event) {
+  const editTrigger = event.target.closest("[data-action='edit-comment']");
+
+  if (editTrigger) {
+    event.preventDefault();
+    handleSocialCommentEditClick(editTrigger);
+    return;
+  }
+
+  const cancelTrigger = event.target.closest("[data-action='cancel-comment-edit']");
+
+  if (cancelTrigger) {
+    event.preventDefault();
+    resetSocialCommentEdit();
+    renderVisibleSocialSurfaces();
+    return;
+  }
+
+  const deleteTrigger = event.target.closest("[data-action='delete-comment']");
+
+  if (deleteTrigger) {
+    event.preventDefault();
+    void handleSocialCommentDeleteClick(deleteTrigger);
+  }
+}
+
+function handleSocialCommentEditClick(trigger) {
+  const context = readSocialCommentActionContext(trigger);
+
+  if (!context?.commentId || !canEditSocialCommentContext(context)) {
+    return;
+  }
+
+  currentSocialCommentEditId = context.commentId;
+  renderVisibleSocialSurfaces();
+}
+
+async function handleSocialCommentEditSubmit(event) {
+  const form = event.target.closest("[data-action='save-comment-edit']");
+
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const context = readSocialCommentActionContext(form);
+
+  if (!context?.commentId || !canEditSocialCommentContext(context) || !db) {
+    return;
+  }
+
+  const bodyInput = form.querySelector("textarea[name='commentBody']");
+  const body = normalizeSocialBody(bodyInput?.value);
+
+  if (!body && !context.hasAttachment) {
+    setSocialSurfaceStatus("COMMENT NEEDS TEXT OR IMAGE.");
+    return;
+  }
+
+  const submitButton = form.querySelector("button[type='submit']");
+  submitButton?.toggleAttribute("disabled", true);
+  setSocialSurfaceStatus("SAVING COMMENT.");
+
+  try {
+    await updateSocialCommentBody(context, body);
+    resetSocialCommentEdit();
+    setSocialSurfaceStatus("COMMENT UPDATED.");
+  } catch (error) {
+    setSocialSurfaceStatus(getErrorMessage(error, "Could not update comment.").toUpperCase());
+  } finally {
+    submitButton?.toggleAttribute("disabled", false);
+  }
+}
+
+async function handleSocialCommentDeleteClick(trigger) {
+  const context = readSocialCommentActionContext(trigger);
+
+  if (!context?.commentId || !canDeleteSocialCommentContext(context) || !db) {
+    return;
+  }
+
+  const confirmed = window.confirm("Delete this comment everywhere it appears?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  trigger.disabled = true;
+  setSocialSurfaceStatus("DELETING COMMENT.");
+
+  try {
+    await deleteSocialComment(context);
+    if (currentSocialCommentEditId === context.commentId) {
+      resetSocialCommentEdit();
+    }
+    setSocialSurfaceStatus("COMMENT DELETED.");
+  } catch (error) {
+    setSocialSurfaceStatus(getErrorMessage(error, "Could not delete comment.").toUpperCase());
+    trigger.disabled = false;
+  }
+}
+
+async function updateSocialCommentBody(context, body) {
+  const commentRef = getMediaCommentDocRef(context);
+  const activityUserId = context.activityUserId || context.authorUid || currentUser?.uid || "";
+  const activityRef = activityUserId ? getActivityDocRef(activityUserId, context.commentId) : null;
+  const [commentSnapshot, activitySnapshot] = await Promise.all([
+    getDoc(commentRef),
+    activityRef ? getDoc(activityRef) : Promise.resolve(null),
+  ]);
+
+  if (!commentSnapshot.exists()) {
+    throw new Error("Comment no longer exists.");
+  }
+
+  const nowMs = Date.now();
+  const patch = {
+    body,
+    editedAt: serverTimestamp(),
+    editedAtMs: nowMs,
+    updatedAt: serverTimestamp(),
+    updatedAtMs: nowMs,
+  };
+  const batch = writeBatch(db);
+
+  batch.set(commentRef, patch, { merge: true });
+
+  if (activityRef && activitySnapshot?.exists()) {
+    batch.set(activityRef, patch, { merge: true });
+  }
+
+  await batch.commit();
+}
+
+async function deleteSocialComment(context) {
+  const commentRef = getMediaCommentDocRef(context);
+  const activityUserId = context.activityUserId || context.authorUid || currentUser?.uid || "";
+  const activityRef = activityUserId ? getActivityDocRef(activityUserId, context.commentId) : null;
+  const [commentSnapshot, activitySnapshot] = await Promise.all([
+    getDoc(commentRef),
+    activityRef ? getDoc(activityRef) : Promise.resolve(null),
+  ]);
+  const batch = writeBatch(db);
+
+  if (commentSnapshot.exists()) {
+    batch.delete(commentRef);
+  }
+
+  if (activityRef && activitySnapshot?.exists()) {
+    batch.delete(activityRef);
+  }
+
+  await batch.commit();
+
+  try {
+    await deleteSocialAttachmentIfPossible(context.attachmentStoragePath);
+  } catch (error) {
+    console.warn("Could not delete social attachment.", error);
+  }
+}
+
+async function deleteSocialAttachmentIfPossible(storagePath) {
+  if (!storage || !storagePath) {
+    return;
+  }
+
+  try {
+    await deleteObject(storageRef(storage, storagePath));
+  } catch (error) {
+    if (!isStorageObjectMissing(error)) {
+      throw error;
+    }
   }
 }
 
@@ -3372,6 +3744,7 @@ function openVideoPreview(tripId, folderId, itemId, view = "archive") {
 
   syncVideoPreviewNavigation(previewState);
   syncVideoPreviewMedia(previewState);
+  syncVideoPreviewComments(previewState);
   setVideoPreviewModalOpen(true);
 
   if (isVideoPreviewItem(previewState.currentItem)) {
@@ -3404,6 +3777,7 @@ function resetVideoPreview() {
   currentVideoPreviewContext = null;
   syncVideoPreviewNavigation(null);
   syncVideoPreviewMedia(null);
+  syncVideoPreviewComments(null);
 
   setVideoPreviewModalOpen(false);
 }
@@ -3452,6 +3826,7 @@ function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()
   }
 
   syncVideoPreviewCertification(previewState);
+  renderVideoPreviewComments(previewState);
 
   if (videoPreviewPrevButton) {
     videoPreviewPrevButton.disabled = !previewState || previewState.currentIndex === 0;
@@ -3516,6 +3891,768 @@ function isVideoPreviewItem(item) {
 
 function isImagePreviewItem(item) {
   return Boolean(item?.mimeType && String(item.mimeType).startsWith("image/"));
+}
+
+function syncVideoPreviewComments(previewState = getCurrentVideoPreviewState()) {
+  syncMediaCommentsSubscription(previewState);
+  renderVideoPreviewComments(previewState);
+}
+
+function syncMediaCommentsSubscription(previewState = getCurrentVideoPreviewState()) {
+  const context = buildMediaCommentContext(previewState);
+  const nextKey = context?.key || "";
+
+  if (!nextKey || !db || !runtimeConfig?.collections?.trips) {
+    mediaCommentsUnsubscribe?.();
+    mediaCommentsUnsubscribe = null;
+    currentMediaCommentsKey = "";
+    return;
+  }
+
+  if (currentMediaCommentsKey === nextKey) {
+    return;
+  }
+
+  mediaCommentsUnsubscribe?.();
+  currentMediaCommentsKey = nextKey;
+
+  if (!mediaCommentsByKey.has(nextKey)) {
+    mediaCommentsByKey.set(nextKey, []);
+  }
+
+  const commentsQuery = query(
+    collection(
+      db,
+      runtimeConfig.collections.trips,
+      context.tripId,
+      "folders",
+      context.folderId,
+      "items",
+      context.itemId,
+      "comments"
+    ),
+    orderBy("createdAtMs", "desc")
+  );
+
+  mediaCommentsUnsubscribe = onSnapshot(
+    commentsQuery,
+    (snapshot) => {
+      mediaCommentsByKey.set(
+        nextKey,
+        snapshot.docs.map((commentDoc) =>
+          normalizeMediaComment({ id: commentDoc.id, ...commentDoc.data() })
+        )
+      );
+      renderVideoPreviewComments(getCurrentVideoPreviewState());
+    },
+    (error) => {
+      setVideoPreviewCommentStatus(getFriendlyFirestoreMessage(error).toUpperCase());
+    }
+  );
+}
+
+function buildMediaCommentContext(previewState) {
+  const item = previewState?.currentItem || null;
+
+  if (!previewState || !item?.id) {
+    return null;
+  }
+
+  const folderId = resolveItemSourceFolderId(item, previewState.folderId);
+
+  if (!previewState.tripId || !folderId || !item.id) {
+    return null;
+  }
+
+  const trip = trips.find((entry) => entry.id === previewState.tripId) || null;
+  const folder = getFoldersForTrip(previewState.tripId).find((entry) => entry.id === folderId) || null;
+  const sourceLabel =
+    buildItemSourceLabel(previewState.tripId, folderId) ||
+    buildFolderPathLabel(trip, folder).replace(/\/$/, "").toUpperCase();
+
+  return {
+    key: buildMediaCommentKey(previewState.tripId, folderId, item.id),
+    tripId: previewState.tripId,
+    folderId,
+    itemId: item.id,
+    itemName: getItemDisplayName(item),
+    sourceLabel,
+  };
+}
+
+function buildMediaCommentKey(tripId, folderId, itemId) {
+  return `${tripId}:${folderId}:${itemId}`;
+}
+
+function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()) {
+  const context = buildMediaCommentContext(previewState);
+  const comments = context ? mediaCommentsByKey.get(context.key) || [] : [];
+  const canComment = Boolean(context && db && currentUser?.uid && canUploadMedia());
+
+  if (videoPreviewCommentForm) {
+    videoPreviewCommentForm.classList.toggle("hidden", !canComment);
+  }
+
+  if (videoPreviewCommentSubmit) {
+    videoPreviewCommentSubmit.disabled = false;
+  }
+
+  if (videoPreviewCommentsList) {
+    videoPreviewCommentsList.innerHTML = !context
+      ? ""
+      : comments.length > 0
+        ? comments.map(renderMediaComment).join("")
+        : renderEmptySocialState("NO COMMENTS YET.");
+  }
+
+  if (!context) {
+    setVideoPreviewCommentStatus("");
+    return;
+  }
+
+  if (comments.length > 0) {
+    setVideoPreviewCommentStatus(buildCountLabel(comments.length, "COMMENT"));
+    return;
+  }
+
+  setVideoPreviewCommentStatus(canComment ? "NO COMMENTS YET." : "SIGN IN TO COMMENT.");
+}
+
+function renderMediaComment(comment) {
+  const actorMarkup = renderSocialActorLink(
+    comment.authorLabel,
+    comment.authorRouteId,
+    "text-stone-100 transition hover:text-white hover:underline"
+  );
+  const controlsMarkup = renderSocialCommentControls(comment);
+  const bodyMarkup = isEditingSocialComment(comment)
+    ? renderSocialCommentEditForm(comment)
+    : `${renderSocialBody(comment.body)}${renderSocialAttachment(comment)}`;
+  const editedMarkup = comment.editedAtMs
+    ? `<span class="text-stone-400/42">EDITED</span>`
+    : "";
+
+  return `
+    <article class="border border-white/10 bg-black/24 p-3">
+      <div class="flex items-start gap-3">
+        <img src="${escapeHtml(getSocialPhotoUrl(comment.authorPhotoURL))}" alt="${escapeHtml(comment.authorLabel)}" class="h-9 w-9 shrink-0 border border-white/10 bg-black object-cover object-center">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em]">
+              ${actorMarkup}
+              <span class="text-stone-400/58">${escapeHtml(formatActivityTime(comment.createdAtMs))}</span>
+              ${editedMarkup}
+            </div>
+            ${controlsMarkup}
+          </div>
+          ${bodyMarkup}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function syncProfileActivitySubscription(userId) {
+  const nextUserId = String(userId || "");
+
+  if (!nextUserId || !db || !runtimeConfig?.collections?.users) {
+    profileActivityUnsubscribe?.();
+    profileActivityUnsubscribe = null;
+    currentProfileActivityUid = "";
+    return;
+  }
+
+  if (currentProfileActivityUid === nextUserId) {
+    return;
+  }
+
+  profileActivityUnsubscribe?.();
+  currentProfileActivityUid = nextUserId;
+
+  if (!profileActivityByUser.has(nextUserId)) {
+    profileActivityByUser.set(nextUserId, []);
+  }
+
+  const activityQuery = query(
+    collection(db, runtimeConfig.collections.users, nextUserId, "activity"),
+    orderBy("createdAtMs", "desc")
+  );
+
+  profileActivityUnsubscribe = onSnapshot(
+    activityQuery,
+    (snapshot) => {
+      profileActivityByUser.set(
+        nextUserId,
+        snapshot.docs.map((activityDoc) =>
+          normalizeActivityEntry({ id: activityDoc.id, ...activityDoc.data() })
+        )
+      );
+      const profileView = getActiveProfileView();
+      const friend = profileView?.state === "ready" ? profileView.friend : null;
+
+      if (friend?.uid === nextUserId) {
+        renderProfileActivityPanel(
+          friend,
+          true,
+          friend.uid === currentUser?.uid,
+          profileView
+        );
+      }
+    },
+    (error) => {
+      setProfileActivityStatus(getFriendlyFirestoreMessage(error).toUpperCase());
+    }
+  );
+}
+
+function renderProfileActivityPanel(friend, isReady, isSelf, profileView = null) {
+  const entries = isReady && friend?.uid ? profileActivityByUser.get(friend.uid) || [] : [];
+  const canPost = Boolean(isReady && db && currentUser?.uid && canUploadMedia());
+
+  if (profileActivityForm) {
+    profileActivityForm.classList.toggle("hidden", !canPost);
+  }
+
+  if (profileActivitySubmit) {
+    profileActivitySubmit.disabled = false;
+  }
+
+  if (profileActivityList) {
+    profileActivityList.innerHTML = !isReady
+      ? renderEmptySocialState(getProfileActivityPlaceholder(profileView))
+      : entries.length > 0
+        ? entries.map((entry) => renderActivityEntry(entry, friend, isSelf)).join("")
+        : renderEmptySocialState("NO WALL ACTIVITY YET.");
+  }
+
+  if (!isReady) {
+    setProfileActivityStatus(getProfileActivityPlaceholder(profileView));
+    return;
+  }
+
+  if (entries.length > 0) {
+    setProfileActivityStatus(buildCountLabel(entries.length, "ACTIVITY"));
+    return;
+  }
+
+  setProfileActivityStatus(canPost ? "WALL OPEN." : "SIGN IN TO WRITE ON WALL.");
+}
+
+function getProfileActivityPlaceholder(profileView) {
+  if (profileView?.state === "signin-required") {
+    return STRINGS.profile.signInRequired;
+  }
+
+  if (profileView?.state === "not-found") {
+    return STRINGS.profile.notFound;
+  }
+
+  if (profileView?.state === "archive") {
+    return "";
+  }
+
+  return STRINGS.profile.loading;
+}
+
+function renderActivityEntry(entry, profileFriend, isSelf = false) {
+  const actorMarkup = renderSocialActorLink(
+    entry.actorLabel,
+    entry.actorRouteId,
+    "text-stone-100 transition hover:text-white hover:underline"
+  );
+  const actionLabel = buildActivityActionLabel(entry, profileFriend, isSelf);
+  const controlsMarkup = entry.type === "media-comment" ? renderSocialCommentControls(entry) : "";
+  const bodyMarkup = entry.type === "media-comment" && isEditingSocialComment(entry)
+    ? renderSocialCommentEditForm(entry)
+    : `${renderSocialBody(entry.body)}${renderSocialAttachment(entry)}`;
+  const editedMarkup = entry.editedAtMs
+    ? `<span class="text-stone-400/42">EDITED</span>`
+    : "";
+
+  return `
+    <article class="border border-white/10 bg-black/24 p-3 sm:p-4">
+      <div class="flex items-start gap-3">
+        <img src="${escapeHtml(getSocialPhotoUrl(entry.actorPhotoURL))}" alt="${escapeHtml(entry.actorLabel)}" class="h-10 w-10 shrink-0 border border-white/10 bg-black object-cover object-center">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em]">
+              ${actorMarkup}
+              <span class="text-stone-400/58">${escapeHtml(formatActivityTime(entry.createdAtMs))}</span>
+              ${editedMarkup}
+            </div>
+            ${controlsMarkup}
+          </div>
+          <p class="mt-1 break-words font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] text-stone-300/58">${escapeHtml(actionLabel)}</p>
+          ${bodyMarkup}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function buildActivityActionLabel(entry, profileFriend, isSelf = false) {
+  if (entry.type === "media-comment") {
+    const itemName = entry.itemName ? ` // ${entry.itemName}` : "";
+    const sourceLabel = entry.sourceLabel ? ` // ${entry.sourceLabel}` : "";
+    return `COMMENTED ON MEDIA${itemName}${sourceLabel}`;
+  }
+
+  if (entry.type === "wall-post") {
+    if (entry.actorUid && entry.actorUid === profileFriend?.uid) {
+      return isSelf ? "POSTED ON YOUR WALL" : "POSTED ON THEIR WALL";
+    }
+
+    if (isSelf) {
+      return "WROTE ON YOUR WALL";
+    }
+
+    return `WROTE ON ${getFriendLabel(profileFriend).toUpperCase()}'S WALL`;
+  }
+
+  return "PROFILE ACTIVITY";
+}
+
+function normalizeMediaComment(comment) {
+  return {
+    id: String(comment?.id || ""),
+    type: "media-comment",
+    body: normalizeSocialBody(comment?.body),
+    authorUid: String(comment?.authorUid || ""),
+    authorLabel: normalizeSocialLabel(comment?.authorLabel),
+    authorRouteId: normalizeRouteId(comment?.authorRouteId),
+    authorPhotoURL: String(comment?.authorPhotoURL || ""),
+    attachmentURL: String(comment?.attachmentURL || ""),
+    attachmentStoragePath: String(comment?.attachmentStoragePath || ""),
+    attachmentMimeType: String(comment?.attachmentMimeType || ""),
+    attachmentName: String(comment?.attachmentName || ""),
+    tripId: String(comment?.tripId || ""),
+    folderId: String(comment?.folderId || ""),
+    itemId: String(comment?.itemId || ""),
+    itemName: String(comment?.itemName || ""),
+    sourceLabel: String(comment?.sourceLabel || ""),
+    createdAtMs: coerceTimestampToMs(comment?.createdAt, comment?.createdAtMs),
+    editedAtMs: coerceTimestampToMs(comment?.editedAt, comment?.editedAtMs),
+  };
+}
+
+function normalizeActivityEntry(entry) {
+  return {
+    id: String(entry?.id || ""),
+    type: String(entry?.type || "wall-post"),
+    body: normalizeSocialBody(entry?.body),
+    actorUid: String(entry?.actorUid || ""),
+    actorLabel: normalizeSocialLabel(entry?.actorLabel),
+    actorRouteId: normalizeRouteId(entry?.actorRouteId),
+    actorPhotoURL: String(entry?.actorPhotoURL || ""),
+    targetUserUid: String(entry?.targetUserUid || ""),
+    targetUserLabel: normalizeSocialLabel(entry?.targetUserLabel),
+    tripId: String(entry?.tripId || ""),
+    folderId: String(entry?.folderId || ""),
+    itemId: String(entry?.itemId || ""),
+    itemName: String(entry?.itemName || ""),
+    sourceLabel: String(entry?.sourceLabel || ""),
+    attachmentURL: String(entry?.attachmentURL || ""),
+    attachmentStoragePath: String(entry?.attachmentStoragePath || ""),
+    attachmentMimeType: String(entry?.attachmentMimeType || ""),
+    attachmentName: String(entry?.attachmentName || ""),
+    createdAtMs: coerceTimestampToMs(entry?.createdAt, entry?.createdAtMs),
+    editedAtMs: coerceTimestampToMs(entry?.editedAt, entry?.editedAtMs),
+  };
+}
+
+function renderSocialCommentControls(entry) {
+  if (entry?.type !== "media-comment") {
+    return "";
+  }
+
+  const context = buildSocialCommentActionContext(entry);
+  const canEdit = canEditSocialCommentContext(context);
+  const canDelete = canDeleteSocialCommentContext(context);
+
+  if (!canEdit && !canDelete) {
+    return "";
+  }
+
+  const buttonClass = getSocialMenuItemButtonClass();
+  const deleteButtonClass = getSocialMenuItemButtonClass("delete");
+  const contextAttrs = renderSocialCommentActionAttributes(context);
+
+  return `
+    <details class="relative shrink-0">
+      <summary class="flex h-7 w-7 cursor-pointer list-none items-center justify-center border border-white/10 bg-black/40 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] leading-none tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.08] [&::-webkit-details-marker]:hidden" aria-label="Comment actions">
+        ...
+      </summary>
+      <div class="absolute right-0 top-[calc(100%+0.35rem)] z-30 w-28 border border-white/12 bg-neutral-950/98 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.45)]">
+        ${
+          canEdit
+            ? `
+              <button type="button" data-action="edit-comment" ${contextAttrs} class="${buttonClass}">
+                Edit
+              </button>
+            `
+            : ""
+        }
+        ${
+          canDelete
+            ? `
+              <button type="button" data-action="delete-comment" ${contextAttrs} class="${deleteButtonClass}">
+                Delete
+              </button>
+            `
+            : ""
+        }
+      </div>
+    </details>
+  `;
+}
+
+function renderSocialCommentEditForm(entry) {
+  const context = buildSocialCommentActionContext(entry);
+  const contextAttrs = renderSocialCommentActionAttributes(context);
+  const buttonClass = getSocialActionButtonClass();
+  const deleteButtonClass = getSocialActionButtonClass("delete");
+
+  return `
+    <form data-action="save-comment-edit" ${contextAttrs} class="mt-3 space-y-2">
+      <textarea
+        name="commentBody"
+        rows="3"
+        maxlength="${MAX_SOCIAL_BODY_LENGTH}"
+        class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
+      >${escapeHtml(entry.body || "")}</textarea>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button type="submit" class="${buttonClass}">Save</button>
+        <button type="button" data-action="cancel-comment-edit" class="${deleteButtonClass}">Cancel</button>
+      </div>
+    </form>
+  `;
+}
+
+function buildSocialCommentActionContext(entry) {
+  const authorUid = getSocialCommentAuthorUid(entry);
+
+  return {
+    commentId: String(entry?.id || ""),
+    tripId: String(entry?.tripId || ""),
+    folderId: String(entry?.folderId || ""),
+    itemId: String(entry?.itemId || ""),
+    authorUid,
+    activityUserId: getSocialCommentActivityUserId(entry),
+    attachmentStoragePath: String(entry?.attachmentStoragePath || ""),
+    hasAttachment: Boolean(entry?.attachmentURL || entry?.attachmentStoragePath),
+  };
+}
+
+function renderSocialCommentActionAttributes(context) {
+  return [
+    ["data-comment-id", context.commentId],
+    ["data-trip-id", context.tripId],
+    ["data-folder-id", context.folderId],
+    ["data-item-id", context.itemId],
+    ["data-author-uid", context.authorUid],
+    ["data-activity-user-id", context.activityUserId],
+    ["data-attachment-storage-path", context.attachmentStoragePath],
+    ["data-has-attachment", context.hasAttachment ? "true" : "false"],
+  ]
+    .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
+    .join(" ");
+}
+
+function readSocialCommentActionContext(element) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    commentId: String(element.getAttribute("data-comment-id") || ""),
+    tripId: String(element.getAttribute("data-trip-id") || ""),
+    folderId: String(element.getAttribute("data-folder-id") || ""),
+    itemId: String(element.getAttribute("data-item-id") || ""),
+    authorUid: String(element.getAttribute("data-author-uid") || ""),
+    activityUserId: String(element.getAttribute("data-activity-user-id") || ""),
+    attachmentStoragePath: String(element.getAttribute("data-attachment-storage-path") || ""),
+    hasAttachment: element.getAttribute("data-has-attachment") === "true",
+  };
+}
+
+function getSocialCommentAuthorUid(entry) {
+  return String(entry?.authorUid || entry?.actorUid || "");
+}
+
+function getSocialCommentActivityUserId(entry) {
+  return String(entry?.actorUid || entry?.authorUid || "");
+}
+
+function canEditSocialCommentContext(context) {
+  return Boolean(
+    context?.commentId &&
+      context.tripId &&
+      context.folderId &&
+      context.itemId &&
+      currentUser?.uid &&
+      context.authorUid === currentUser.uid
+  );
+}
+
+function canDeleteSocialCommentContext(context) {
+  return Boolean(
+    context?.commentId &&
+      context.tripId &&
+      context.folderId &&
+      context.itemId &&
+      currentUser?.uid &&
+      (context.authorUid === currentUser.uid || isAdminViewEnabled())
+  );
+}
+
+function isEditingSocialComment(entry) {
+  return Boolean(entry?.id && currentSocialCommentEditId === entry.id);
+}
+
+function resetSocialCommentEdit() {
+  currentSocialCommentEditId = "";
+}
+
+function renderVisibleSocialSurfaces() {
+  if (videoPreviewModalOpen) {
+    renderVideoPreviewComments(getCurrentVideoPreviewState());
+  }
+
+  const profileView = getActiveProfileView();
+  const friend = profileView?.state === "ready" ? profileView.friend : null;
+  renderProfileActivityPanel(
+    friend,
+    Boolean(friend),
+    Boolean(friend?.uid && friend.uid === currentUser?.uid),
+    profileView
+  );
+}
+
+function getMediaCommentDocRef(context) {
+  return doc(
+    db,
+    runtimeConfig.collections.trips,
+    context.tripId,
+    "folders",
+    context.folderId,
+    "items",
+    context.itemId,
+    "comments",
+    context.commentId
+  );
+}
+
+function getActivityDocRef(userId, activityId) {
+  return doc(db, runtimeConfig.collections.users, userId, "activity", activityId);
+}
+
+function setSocialSurfaceStatus(message) {
+  if (videoPreviewModalOpen) {
+    setVideoPreviewCommentStatus(message);
+  }
+
+  if (isProfileRoute()) {
+    setProfileActivityStatus(message);
+  }
+}
+
+function getSocialActionButtonClass(tone = "default") {
+  if (tone === "delete") {
+    return "inline-flex border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-45";
+  }
+
+  return "inline-flex border border-white/10 px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-45";
+}
+
+function getSocialMenuItemButtonClass(tone = "default") {
+  if (tone === "delete") {
+    return "block w-full border border-transparent px-2 py-1.5 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-red-300/35 hover:bg-red-300/10 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-45";
+  }
+
+  return "block w-full border border-transparent px-2 py-1.5 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-white/18 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-45";
+}
+
+function buildActivityActorFields() {
+  const profile =
+    currentUserProfile ||
+    getFriendByUid(currentUser?.uid) ||
+    normalizeFriend({
+      uid: currentUser?.uid || "",
+      email: currentUser?.email || "",
+      displayName: "",
+      googleName: currentUser?.displayName || inferNameFromEmail(currentUser?.email),
+      routeId: currentUserProfile?.routeId || "",
+    });
+
+  return {
+    actorUid: String(currentUser?.uid || profile.uid || ""),
+    actorLabel: getFriendLabel(profile),
+    actorRouteId: normalizeRouteId(profile.routeId),
+    actorPhotoURL: getFriendPhotoUrl(profile),
+  };
+}
+
+async function uploadSocialAttachment(file, contextLabel) {
+  if (!file) {
+    return {
+      attachmentURL: "",
+      attachmentStoragePath: "",
+      attachmentMimeType: "",
+      attachmentName: "",
+    };
+  }
+
+  if (!storage || !storageReady || !currentUser?.uid) {
+    throw new Error(STRINGS.uploads.storageNotReady);
+  }
+
+  if (!isSupportedProfileImage(file)) {
+    throw new Error(STRINGS.firebase.profileImageType);
+  }
+
+  if (Number(file.size || 0) > MAX_PROFILE_IMAGE_SIZE_BYTES) {
+    throw new Error(STRINGS.firebase.profileImageSize);
+  }
+
+  const extension = getFileExtension(file.name) || getSocialImageExtension(file.type);
+  const safeContext = sanitizeFileBaseName(contextLabel || "activity");
+  const storagePath = `social/${currentUser.uid}/${safeContext}-${buildUniqueStamp()}.${extension}`;
+  const attachmentRef = storageRef(storage, storagePath);
+  const task = uploadBytesResumable(attachmentRef, file, {
+    contentType: file.type || "image/jpeg",
+    customMetadata: {
+      createdByUid: String(currentUser.uid || ""),
+      createdByEmail: String(currentUser.email || ""),
+      context: safeContext,
+    },
+  });
+
+  await new Promise((resolve, reject) => {
+    task.on("state_changed", undefined, reject, resolve);
+  });
+
+  return {
+    attachmentURL: await getDownloadURL(task.snapshot.ref),
+    attachmentStoragePath: storagePath,
+    attachmentMimeType: file.type || "image/jpeg",
+    attachmentName: file.name || "attachment",
+  };
+}
+
+function getSocialImageExtension(mimeType) {
+  const normalized = String(mimeType || "").toLowerCase();
+
+  if (normalized === "image/png") {
+    return "png";
+  }
+
+  if (normalized === "image/webp") {
+    return "webp";
+  }
+
+  if (normalized === "image/gif") {
+    return "gif";
+  }
+
+  return "jpg";
+}
+
+function renderSocialActorLink(label, routeId, className) {
+  const displayLabel = normalizeSocialLabel(label);
+  const profileHref = routeId ? buildProfilePath(routeId) : "";
+
+  if (!profileHref) {
+    return `<span class="${className}">${escapeHtml(displayLabel)}</span>`;
+  }
+
+  return `<a href="${escapeHtml(profileHref)}" class="${className}">${escapeHtml(displayLabel)}</a>`;
+}
+
+function renderSocialBody(body) {
+  const normalizedBody = normalizeSocialBody(body);
+
+  if (!normalizedBody) {
+    return "";
+  }
+
+  return `<p class="mt-3 whitespace-pre-wrap break-words text-sm leading-6 tracking-[0.04em] text-stone-100/88">${escapeHtml(normalizedBody)}</p>`;
+}
+
+function renderSocialAttachment(entry) {
+  if (!entry?.attachmentURL) {
+    return "";
+  }
+
+  const name = entry.attachmentName || "attachment";
+
+  return `
+    <a href="${escapeHtml(entry.attachmentURL)}" target="_blank" rel="noreferrer" class="mt-3 block overflow-hidden border border-white/10 bg-black/32 transition hover:border-white/28">
+      <img src="${escapeHtml(entry.attachmentURL)}" alt="${escapeHtml(name)}" class="max-h-72 w-full object-contain">
+    </a>
+  `;
+}
+
+function renderEmptySocialState(message) {
+  if (!message) {
+    return "";
+  }
+
+  return `
+    <div class="border border-white/10 bg-black/18 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em] text-stone-300/54">
+      ${escapeHtml(message)}
+    </div>
+  `;
+}
+
+function normalizeSocialBody(value) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .trim()
+    .slice(0, MAX_SOCIAL_BODY_LENGTH);
+}
+
+function normalizeSocialLabel(value) {
+  return normalizeDisplayName(value) || STRINGS.members.unknown;
+}
+
+function getSocialPhotoUrl(photoURL) {
+  const url = String(photoURL || "").trim();
+  return url || DEFAULT_PROFILE_IMAGE_URL;
+}
+
+function formatActivityTime(value) {
+  const timestamp = Number(value || 0);
+
+  if (!timestamp) {
+    return "JUST NOW";
+  }
+
+  return new Date(timestamp)
+    .toLocaleString([], {
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .toUpperCase();
+}
+
+function buildCountLabel(count, singularLabel) {
+  const total = Number(count || 0);
+  const label = total === 1 ? singularLabel : `${singularLabel}S`;
+  return `${String(total).padStart(4, "0")} ${label}`;
+}
+
+function setVideoPreviewCommentStatus(message) {
+  if (videoPreviewCommentStatus) {
+    videoPreviewCommentStatus.textContent = message || "";
+  }
+}
+
+function setProfileActivityStatus(message) {
+  if (profileActivityStatus) {
+    profileActivityStatus.textContent = message || "";
+  }
 }
 
 function syncVideoPreviewCertification(previewState = getCurrentVideoPreviewState()) {
@@ -4432,6 +5569,9 @@ function renderAll() {
   renderFooterTicker();
   renderTrips();
   renderProfilePage();
+  if (videoPreviewModalOpen) {
+    syncVideoPreviewComments(getCurrentVideoPreviewState());
+  }
   renderAdminSelects();
   syncFeaturedMessageForm();
   renderUploadQueue();
@@ -4871,6 +6011,8 @@ function renderResolvedProfilePage(profileView) {
     ? renderTripSections({ view: "profile", profileFriend: friend })
     : "";
   const hasAuthoredContent = Boolean(tripMarkup.trim());
+  syncProfileActivitySubscription(isReady ? friend.uid : "");
+  renderProfileActivityPanel(friend, isReady, isSelf, profileView);
 
   if (profilePageTitle) {
     profilePageTitle.textContent = STRINGS.profile.title;
@@ -5151,6 +6293,35 @@ function renderTripToggleIndicator(expanded) {
   `;
 }
 
+function renderTripStatusTag(trip) {
+  if (!isUpcomingTrip(trip)) {
+    return "";
+  }
+
+  return `
+    <span
+      class="shrink-0 border px-2 py-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.18em] sm:text-[0.62rem]"
+      style="border-color:rgba(190,229,255,0.52);background-color:rgba(190,229,255,0.095);color:#d9f1ff;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.035),0 0 16px rgba(190,229,255,0.08);"
+    >
+      Upcoming
+    </span>
+  `;
+}
+
+function isUpcomingTrip(trip) {
+  const status = String(trip?.status || "").toLowerCase();
+
+  if (status === "upcoming") {
+    return true;
+  }
+
+  const tripText = `${trip?.label || ""} ${trip?.slug || ""} ${trip?.id || ""}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ");
+
+  return /\b(kelowna|ktown|k town)\b/.test(tripText) && /\b26\b/.test(tripText);
+}
+
 function renderTripSection(trip, index, { view = "archive", profileFriend = null } = {}) {
   const isProfileView = view === "profile";
   const adminMode = !isProfileView && isAdminViewEnabled();
@@ -5176,6 +6347,7 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
   const pathLabel = selectedFolder ? buildFolderPathLabel(trip, selectedFolder) : `${trip.slug}/`;
   const highlightFolderSelected = isHighlightFolder(selectedFolder);
   const tripToggleIndicatorMarkup = isProfileView ? "" : renderTripToggleIndicator(expanded);
+  const tripStatusTagMarkup = renderTripStatusTag(trip);
   const shellClass = isProfileView
     ? "border border-white/12 bg-[linear-gradient(to_bottom,rgba(38,38,38,0.18),rgba(255,255,255,0.02)_40%,rgba(0,0,0,0.1))]"
     : "border border-white/10 bg-white/[0.02]";
@@ -5249,7 +6421,10 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
           <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] ${isProfileView ? "text-stone-200/72" : "text-stone-300/55"}">${String(
             getTripSequenceNumber(trip, index)
           ).padStart(4, "0")}</p>
-          <h2 class="whitespace-nowrap text-2xl uppercase tracking-[0.18em] text-stone-100 sm:text-3xl">${escapeHtml(`${trip.slug}/`)}</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="whitespace-nowrap text-2xl uppercase tracking-[0.18em] text-stone-100 sm:text-3xl">${escapeHtml(`${trip.slug}/`)}</h2>
+            ${tripStatusTagMarkup}
+          </div>
           <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-xs uppercase tracking-[0.18em] ${isProfileView ? "text-stone-300/60" : "text-stone-300/60"}">${escapeHtml(trip.label)}</p>
         </div>
         <div class="min-w-0 w-full">
@@ -5447,12 +6622,7 @@ function renderItemRows(items, tripId, folderId, view = "archive", options = {})
       const cellBorderClass = certifiedRow
         ? "border-b border-transparent"
         : "border-b border-white/8";
-      const nameMarkup =
-        item.kind === "text"
-          ? `<div class="text-stone-100">${escapeHtml(item.title || item.name)}</div>`
-          : `<a class="text-stone-100 underline-offset-4 hover:text-white hover:underline" href="${escapeHtml(
-              item.downloadURL
-            )}" target="_blank" rel="noreferrer">${escapeHtml(displayName)}</a>`;
+      const nameMarkup = renderItemNameMarkup(item, displayName, tripId, folderId, view);
 
       return `
         <tr class="transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.028)]" : ""}"${certifiedRow ? ` style="${getCertifiedRowStyle()}"` : ""}>
@@ -5469,6 +6639,33 @@ function renderItemRows(items, tripId, folderId, view = "archive", options = {})
       `;
     })
     .join("");
+}
+
+function renderItemNameMarkup(item, displayName, tripId, folderId, view = "archive") {
+  if (item.kind === "text") {
+    return `<div class="text-stone-100">${escapeHtml(item.title || item.name)}</div>`;
+  }
+
+  if (isPreviewableMediaItem(item)) {
+    return `
+      <button
+        type="button"
+        data-action="preview-media"
+        data-view="${escapeHtml(view)}"
+        data-trip-id="${escapeHtml(tripId)}"
+        data-folder-id="${escapeHtml(folderId)}"
+        data-item-id="${escapeHtml(item.id)}"
+        class="bg-transparent p-0 text-left text-stone-100 underline-offset-4 transition hover:text-white hover:underline"
+        aria-label="Preview ${escapeHtml(displayName)}"
+      >
+        ${escapeHtml(displayName)}
+      </button>
+    `;
+  }
+
+  return `<a class="text-stone-100 underline-offset-4 hover:text-white hover:underline" href="${escapeHtml(
+    item.downloadURL
+  )}" target="_blank" rel="noreferrer">${escapeHtml(displayName)}</a>`;
 }
 
 function renderItemSource(tripId, folderId) {

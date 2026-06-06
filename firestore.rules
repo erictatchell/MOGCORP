@@ -209,6 +209,128 @@ service cloud.firestore {
         ]);
     }
 
+    function hasValidSocialAttachmentFields() {
+      return request.resource.data.attachmentURL is string
+        && request.resource.data.attachmentStoragePath is string
+        && request.resource.data.attachmentMimeType is string
+        && request.resource.data.attachmentName is string;
+    }
+
+    function hasValidSocialContent() {
+      return request.resource.data.body is string
+        && request.resource.data.body.size() <= 600
+        && hasValidSocialAttachmentFields()
+        && (
+          request.resource.data.body.size() > 0 ||
+          request.resource.data.attachmentURL.size() > 0
+        );
+    }
+
+    function hasValidActivityActorFields() {
+      return request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorLabel is string
+        && request.resource.data.actorLabel.size() > 0
+        && request.resource.data.actorRouteId is string
+        && request.resource.data.actorPhotoURL is string;
+    }
+
+    function hasValidMediaCommentAuthorFields() {
+      return request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorLabel is string
+        && request.resource.data.authorLabel.size() > 0
+        && request.resource.data.authorRouteId is string
+        && request.resource.data.authorPhotoURL is string;
+    }
+
+    function hasValidActivityMediaFields() {
+      return request.resource.data.tripId is string
+        && request.resource.data.folderId is string
+        && request.resource.data.itemId is string
+        && request.resource.data.itemName is string
+        && request.resource.data.sourceLabel is string;
+    }
+
+    function isValidActivityCreate(userId) {
+      return isMember()
+        && request.resource.data.id is string
+        && request.resource.data.type in ['wall-post', 'media-comment']
+        && hasValidSocialContent()
+        && hasValidActivityActorFields()
+        && request.resource.data.targetUserUid is string
+        && request.resource.data.targetUserLabel is string
+        && request.resource.data.createdAtMs is number
+        && request.resource.data.createdAtMs > 0
+        && (
+          (
+            request.resource.data.type == 'wall-post'
+            && (
+              request.resource.data.targetUserUid == userId ||
+              userId == request.auth.uid
+            )
+          ) ||
+          (
+            request.resource.data.type == 'media-comment'
+            && userId == request.auth.uid
+            && request.resource.data.targetUserUid == request.auth.uid
+            && hasValidActivityMediaFields()
+          )
+        );
+    }
+
+    function isValidMediaCommentCreate(tripId, folderId, itemId) {
+      return isMember()
+        && request.resource.data.id is string
+        && request.resource.data.type == 'media-comment'
+        && hasValidSocialContent()
+        && hasValidMediaCommentAuthorFields()
+        && request.resource.data.tripId == tripId
+        && request.resource.data.folderId == folderId
+        && request.resource.data.itemId == itemId
+        && request.resource.data.itemName is string
+        && request.resource.data.sourceLabel is string
+        && request.resource.data.createdAtMs is number
+        && request.resource.data.createdAtMs > 0;
+    }
+
+    function isValidSocialCommentEdit() {
+      return hasValidSocialContent()
+        && request.resource.data.editedAtMs is number
+        && request.resource.data.updatedAtMs is number
+        && request.resource.data.editedAtMs > 0
+        && request.resource.data.updatedAtMs > 0
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'body',
+          'editedAt',
+          'editedAtMs',
+          'updatedAt',
+          'updatedAtMs'
+        ]);
+    }
+
+    function isValidActivityMediaCommentUpdate() {
+      return isMember()
+        && resource.data.type == 'media-comment'
+        && resource.data.actorUid == request.auth.uid
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.actorUid == resource.data.actorUid
+        && request.resource.data.tripId == resource.data.tripId
+        && request.resource.data.folderId == resource.data.folderId
+        && request.resource.data.itemId == resource.data.itemId
+        && isValidSocialCommentEdit();
+    }
+
+    function isValidMediaCommentUpdate() {
+      return isMember()
+        && resource.data.type == 'media-comment'
+        && resource.data.authorUid == request.auth.uid
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.authorUid == resource.data.authorUid
+        && request.resource.data.tripId == resource.data.tripId
+        && request.resource.data.folderId == resource.data.folderId
+        && request.resource.data.itemId == resource.data.itemId
+        && isValidSocialCommentEdit();
+    }
+
     match /users/{userId} {
       allow read: if true;
       allow create: if isSignedIn() && isValidSelfCreate(userId);
@@ -218,6 +340,15 @@ service cloud.firestore {
           (isAdmin() && isValidAdminUpdate(userId))
         );
       allow delete: if isAdmin();
+
+      match /activity/{activityId} {
+        allow read: if true;
+        allow create: if isValidActivityCreate(userId);
+        allow update: if isValidActivityMediaCommentUpdate();
+        allow delete: if isAdmin()
+          || (isMember() && resource.data.actorUid == request.auth.uid)
+          || (isMember() && userId == request.auth.uid && resource.data.type == 'wall-post');
+      }
     }
 
     match /settings/{settingId} {
@@ -239,6 +370,14 @@ service cloud.firestore {
           allow create: if isAdmin() || isValidMemberMediaCreate() || isValidMemberTextCreate();
           allow update: if isAdmin() || isValidMemberTextUpdate() || isValidMemberFileUpdate();
           allow delete: if isAdmin() || isItemOwner();
+
+          match /comments/{commentId} {
+            allow read: if request.auth == null || isMember();
+            allow create: if isValidMediaCommentCreate(tripId, folderId, itemId);
+            allow update: if isValidMediaCommentUpdate();
+            allow delete: if isAdmin()
+              || (isMember() && resource.data.authorUid == request.auth.uid);
+          }
         }
       }
     }

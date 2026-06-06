@@ -547,6 +547,18 @@
       </div>
 
       <section id="archive-page" class="mt-6">
+        <section class="mb-6 border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.055),rgba(255,255,255,0.012)_42%,rgba(0,0,0,0.18))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)] sm:p-5">
+          <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.28em] text-stone-300/58 sm:text-[0.68rem]">
+            About Us / Project Goal
+          </p>
+          <blockquote class="mt-3 max-w-3xl text-2xl uppercase leading-[1.05] tracking-[0.14em] text-stone-100 sm:text-3xl">
+            Memory is a place you build before it disappears.
+          </blockquote>
+          <p class="mt-4 max-w-4xl font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase leading-6 tracking-[0.16em] text-stone-300/70 sm:text-[0.72rem]">
+            100GIGZ exists to protect the proof that the night happened: the first laugh, the last song, the blurry streetlight, the clip nobody meant to keep but everyone needs back. This archive is a promise that the people, places, and tiny flashes that made us feel alive will not be left to vanish in a camera roll.
+          </p>
+        </section>
+
         <div class="flex items-center justify-between border-b border-white/10 pb-4">
           <p id="trip-db-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-300/65">
             TRIP DB
@@ -626,6 +638,28 @@
           </aside>
 
           <div class="space-y-5">
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <div class="flex flex-col gap-2 border-b border-white/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.28em] text-stone-100/78">
+                    Wall / Activity
+                  </p>
+                  <p id="profile-activity-status" class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-300/58"></p>
+                </div>
+              </div>
+
+              <form id="profile-activity-form" class="mt-4 hidden space-y-3">
+                <textarea id="profile-activity-body" name="activityBody" rows="3" maxlength="600" placeholder="WRITE ON THIS WALL..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <input id="profile-activity-image" name="activityImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 border border-white/12 bg-black/40 px-3 py-2 text-[0.68rem] tracking-[0.08em] text-stone-100 outline-none transition file:mr-3 file:border-0 file:bg-white/8 file:px-2 file:py-1.5 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-stone-200 focus:border-white/35">
+                  <button id="profile-activity-submit" type="submit" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
+                    Post To Wall
+                  </button>
+                </div>
+              </form>
+
+              <div id="profile-activity-list" class="mt-4 max-h-[32rem] space-y-3 overflow-y-auto pr-1"></div>
+            </section>
             <div id="profile-empty-state" class="hidden border border-white/10 bg-black/22 px-4 py-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.18em] text-stone-300/62"></div>
             <div id="profile-trip-list" class="space-y-5"></div>
           </div>
@@ -772,7 +806,7 @@
       <div id="video-preview-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6">
         <div id="video-preview-backdrop" class="absolute inset-0 bg-black/82 backdrop-blur-sm"></div>
 
-        <div id="video-preview-shell" class="relative w-full max-w-5xl border border-white/12 bg-neutral-950 shadow-[0_24px_96px_rgba(0,0,0,0.62)]">
+        <div id="video-preview-shell" class="relative flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden border border-white/12 bg-neutral-950 shadow-[0_24px_96px_rgba(0,0,0,0.62)]">
           <div class="flex flex-col gap-3 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
             <div class="min-w-0">
               <p id="video-preview-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.2em] text-stone-200/82"></p>
@@ -783,7 +817,7 @@
             </button>
           </div>
 
-          <div class="px-4 py-4 sm:px-6 sm:py-6">
+          <div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
               <button id="video-preview-prev-button" type="button" class="shrink-0 border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-35">
                 &larr; Prev
@@ -796,9 +830,28 @@
               </button>
             </div>
             <div id="video-preview-frame" class="border border-white/12 bg-black/70 p-1.5 sm:p-2">
-              <video id="video-preview-player" class="max-h-[78vh] w-full bg-black" controls autoplay playsinline preload="metadata"></video>
-              <img id="video-preview-image" alt="" class="hidden max-h-[78vh] w-full bg-black object-contain">
+              <video id="video-preview-player" class="max-h-[58vh] w-full bg-black" controls autoplay playsinline preload="metadata"></video>
+              <img id="video-preview-image" alt="" class="hidden max-h-[58vh] w-full bg-black object-contain">
             </div>
+
+            <section class="mt-4 border border-white/10 bg-black/28 p-3 sm:p-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.22em] text-stone-300/70">
+                  Comments
+                </p>
+                <p id="video-preview-comment-status" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] text-stone-400/72"></p>
+              </div>
+              <div id="video-preview-comments-list" class="mt-3 max-h-64 space-y-3 overflow-y-auto pr-1"></div>
+              <form id="video-preview-comment-form" class="mt-4 hidden space-y-3 border-t border-white/10 pt-4">
+                <textarea id="video-preview-comment-body" name="commentBody" rows="3" maxlength="600" placeholder="ADD A COMMENT..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <input id="video-preview-comment-image" name="commentImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 border border-white/12 bg-black/40 px-3 py-2 text-[0.68rem] tracking-[0.08em] text-stone-100 outline-none transition file:mr-3 file:border-0 file:bg-white/8 file:px-2 file:py-1.5 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-stone-200 focus:border-white/35">
+                  <button id="video-preview-comment-submit" type="submit" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
+                    Post Comment
+                  </button>
+                </div>
+              </form>
+            </section>
           </div>
         </div>
       </div>

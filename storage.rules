@@ -48,9 +48,21 @@ service firebase.storage {
         && request.resource.contentType.matches('image/(png|jpeg|webp|gif)');
     }
 
+    function isAllowedSocialImageUpload() {
+      return request.resource != null
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(png|jpeg|webp|gif)');
+    }
+
     match /profiles/{userId}/{allPaths=**} {
       allow read: if true;
       allow create, update: if isSignedIn() && request.auth.uid == userId && isAllowedProfileUpload();
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /social/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isMember() && request.auth.uid == userId && isAllowedSocialImageUpload();
       allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
