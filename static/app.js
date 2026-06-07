@@ -335,6 +335,7 @@ let mediaItemKeyByThreadKey = new Map();
 let mediaReplyCountsByItemKey = new Map();
 let replyCountsByThreadKey = new Map();
 let likeActorsByTargetKey = new Map();
+let interactionRefreshFrame = 0;
 let currentRoute = normalizeRoute(window.location.pathname);
 let featuredMessage = DEFAULT_FEATURED_MESSAGE;
 let vaultState = {
@@ -580,7 +581,10 @@ async function initialize() {
     subscribeToSiteSettings();
     subscribeToTrips();
     subscribeToFriends();
-    subscribeToInteractionAggregates();
+    // Let the main archive/profile shell paint before attaching the sitewide aggregate listeners.
+    window.requestAnimationFrame(() => {
+      subscribeToInteractionAggregates();
+    });
   } else {
     showWarning(STRINGS.errors.runtimeConfigMissing);
   }
@@ -2113,11 +2117,7 @@ async function handleMediaItemLikeButtonClick() {
   try {
     const nextLiked = await toggleLikeAtRef(getMediaItemLikeDocRef(context, currentUser.uid));
     applyLocalLikeState(context.likeKey, currentUser.uid, nextLiked);
-    renderAll();
-
-    if (threadModalOpen) {
-      renderThreadDialog();
-    }
+    scheduleInteractionRefresh();
   } catch (error) {
     setVideoPreviewCommentStatus(getErrorMessage(error, "Could not update like.").toUpperCase());
   } finally {
@@ -2244,11 +2244,7 @@ async function handleSocialLikeToggleClick(trigger) {
   try {
     const nextLiked = await toggleLikeAtRef(likeRef);
     applyLocalLikeState(context.targetKey, currentUser.uid, nextLiked);
-    renderAll();
-
-    if (threadModalOpen) {
-      renderThreadDialog();
-    }
+    scheduleInteractionRefresh();
   } catch (error) {
     setSocialSurfaceStatus(getErrorMessage(error, "Could not update like.").toUpperCase());
     trigger.disabled = false;
@@ -2969,7 +2965,7 @@ function subscribeToMediaCommentAggregates() {
       mediaCommentCountsByItemKey = nextCommentCountsByItemKey;
       mediaItemKeyByThreadKey = nextMediaItemKeyByThreadKey;
       rebuildMediaReplyCountsByItemKey();
-      renderAll();
+      scheduleInteractionRefresh();
     },
     (error) => {
       console.warn("Could not subscribe to media comment aggregates.", error);
@@ -3003,7 +2999,7 @@ function subscribeToThreadReplyAggregates() {
 
       replyCountsByThreadKey = nextReplyCountsByThreadKey;
       rebuildMediaReplyCountsByItemKey();
-      renderAll();
+      scheduleInteractionRefresh();
     },
     (error) => {
       console.warn("Could not subscribe to thread reply aggregates.", error);
@@ -3035,7 +3031,7 @@ function subscribeToLikeAggregates() {
       });
 
       likeActorsByTargetKey = nextLikeActorsByTargetKey;
-      renderAll();
+      scheduleInteractionRefresh();
     },
     (error) => {
       console.warn("Could not subscribe to like aggregates.", error);
@@ -6127,6 +6123,10 @@ function renderVisibleSocialSurfaces() {
     renderThreadDialog();
   }
 
+  if (!isProfileRoute()) {
+    return;
+  }
+
   const profileView = getActiveProfileView();
   const friend = profileView?.state === "ready" ? profileView.friend : null;
   renderProfileActivityPanel(
@@ -6135,6 +6135,35 @@ function renderVisibleSocialSurfaces() {
     Boolean(friend?.uid && friend.uid === currentUser?.uid),
     profileView
   );
+}
+
+function renderVisibleRouteContent() {
+  if (isProfileRoute()) {
+    renderProfilePage();
+    return;
+  }
+
+  syncProfileActivitySubscription("");
+  renderTrips();
+}
+
+function scheduleInteractionRefresh() {
+  if (interactionRefreshFrame) {
+    return;
+  }
+
+  interactionRefreshFrame = window.requestAnimationFrame(() => {
+    interactionRefreshFrame = 0;
+    renderVisibleRouteContent();
+
+    if (videoPreviewModalOpen) {
+      renderVideoPreviewComments(getCurrentVideoPreviewState());
+    }
+
+    if (threadModalOpen) {
+      renderThreadDialog();
+    }
+  });
 }
 
 function getMediaCommentDocRef(context) {
@@ -7554,10 +7583,12 @@ function renderAll() {
   renderCurrentPage();
   renderTripCount();
   renderFooterTicker();
-  renderTrips();
-  renderProfilePage();
+  renderVisibleRouteContent();
   if (videoPreviewModalOpen) {
     syncVideoPreviewComments(getCurrentVideoPreviewState());
+  }
+  if (threadModalOpen) {
+    renderThreadDialog();
   }
   renderAdminSelects();
   syncFeaturedMessageForm();
