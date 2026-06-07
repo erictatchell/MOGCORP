@@ -5905,9 +5905,9 @@ function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()
   videoPreviewCommentToggleButton.classList.toggle("hidden", !context);
 
   videoPreviewCommentToggleButton.innerHTML = `
-    <span>${escapeHtml(commentLabel)}</span>
+    <span>${escapeHtml(commentCountLabel)}</span>
     <span class="ml-2 border-l border-current/20 pl-2 text-stone-300/70">
-      ${escapeHtml(commentCountLabel)}
+      ${escapeHtml(commentLabel)}
     </span>
   `;
 
