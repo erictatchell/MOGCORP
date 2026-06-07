@@ -213,6 +213,30 @@ const videoPreviewCommentImageInput = document.getElementById("video-preview-com
 const videoPreviewCommentSubmit = document.getElementById("video-preview-comment-submit");
 const videoPreviewCommentStatus = document.getElementById("video-preview-comment-status");
 const videoPreviewCommentsList = document.getElementById("video-preview-comments-list");
+const videoPreviewSocialSummary = document.getElementById("video-preview-social-summary");
+const videoPreviewLikeButton = document.getElementById("video-preview-like-button");
+const videoPreviewThreadShell = document.getElementById("video-preview-thread-shell");
+const videoPreviewThreadTitle = document.getElementById("video-preview-thread-title");
+const videoPreviewThreadContext = document.getElementById("video-preview-thread-context");
+const videoPreviewThreadCloseButton = document.getElementById("video-preview-thread-close-button");
+const videoPreviewThreadStatus = document.getElementById("video-preview-thread-status");
+const videoPreviewThreadList = document.getElementById("video-preview-thread-list");
+const videoPreviewThreadForm = document.getElementById("video-preview-thread-form");
+const videoPreviewThreadBodyInput = document.getElementById("video-preview-thread-body");
+const videoPreviewThreadImageInput = document.getElementById("video-preview-thread-image");
+const videoPreviewThreadSubmit = document.getElementById("video-preview-thread-submit");
+const threadModal = document.getElementById("thread-modal");
+const threadBackdrop = document.getElementById("thread-backdrop");
+const threadCloseButton = document.getElementById("thread-close-button");
+const threadTitle = document.getElementById("thread-title");
+const threadContext = document.getElementById("thread-context");
+const threadRootEntry = document.getElementById("thread-root-entry");
+const threadStatus = document.getElementById("thread-status");
+const threadList = document.getElementById("thread-list");
+const threadForm = document.getElementById("thread-form");
+const threadBodyInput = document.getElementById("thread-body");
+const threadImageInput = document.getElementById("thread-image");
+const threadSubmit = document.getElementById("thread-submit");
 const contributeModal = document.getElementById("contribute-modal");
 const contributeBackdrop = document.getElementById("contribute-backdrop");
 const contributeCloseButton = document.getElementById("contribute-close-button");
@@ -280,6 +304,7 @@ let mobileMenuOpen = false;
 let editPostModalOpen = false;
 let moveItemModalOpen = false;
 let videoPreviewModalOpen = false;
+let threadModalOpen = false;
 let contributeModalOpen = false;
 let textPreviewModalOpen = false;
 let currentVideoPreviewContext = null;
@@ -287,13 +312,29 @@ let currentItemMove = null;
 let currentContributionContext = null;
 let currentTextPreviewContext = null;
 let currentSocialCommentEditId = "";
+let currentWallPostEditId = "";
 let currentMediaCommentsKey = "";
 let mediaCommentsUnsubscribe = null;
 let mediaCommentsByKey = new Map();
+let currentThreadSurface = "";
+let currentThreadContext = null;
+let currentThreadRootEntry = null;
+let currentThreadStatusMessage = "";
+let currentThreadRepliesKey = "";
+let threadRepliesUnsubscribe = null;
+let threadRepliesByKey = new Map();
 let currentProfileActivityUid = "";
 let profileActivityUnsubscribe = null;
 let profileActivityByUser = new Map();
 let profileSelectedFolders = new Map();
+let mediaCommentAggregateUnsubscribe = null;
+let threadReplyAggregateUnsubscribe = null;
+let likeAggregateUnsubscribe = null;
+let mediaCommentCountsByItemKey = new Map();
+let mediaItemKeyByThreadKey = new Map();
+let mediaReplyCountsByItemKey = new Map();
+let replyCountsByThreadKey = new Map();
+let likeActorsByTargetKey = new Map();
 let currentRoute = normalizeRoute(window.location.pathname);
 let featuredMessage = DEFAULT_FEATURED_MESSAGE;
 let vaultState = {
@@ -539,6 +580,7 @@ async function initialize() {
     subscribeToSiteSettings();
     subscribeToTrips();
     subscribeToFriends();
+    subscribeToInteractionAggregates();
   } else {
     showWarning(STRINGS.errors.runtimeConfigMissing);
   }
@@ -1003,7 +1045,10 @@ function initializeAuthListener() {
       resetContributeDialog();
       resetTextPreview();
       resetItemMoveDialog();
+      resetVideoPreviewThreadSelection();
+      resetThreadDialog();
       resetSocialCommentEdit();
+      resetWallPostEdit();
       syncVideoPreviewComments(getCurrentVideoPreviewState());
       syncProfileActivitySubscription("");
       adminPanelsVisible = false;
@@ -1054,9 +1099,18 @@ function setupForms() {
   videoPreviewPrevButton?.addEventListener("click", () => navigateVideoPreview(-1));
   videoPreviewNextButton?.addEventListener("click", () => navigateVideoPreview(1));
   videoPreviewCertifyButton?.addEventListener("click", handleVideoPreviewCertifiedToggleClick);
+  videoPreviewLikeButton?.addEventListener("click", handleMediaItemLikeButtonClick);
   videoPreviewCommentForm?.addEventListener("submit", handleVideoPreviewCommentSubmit);
   videoPreviewCommentsList?.addEventListener("click", handleSocialCommentActionClick);
   videoPreviewCommentsList?.addEventListener("submit", handleSocialCommentEditSubmit);
+  videoPreviewThreadList?.addEventListener("click", handleSocialCommentActionClick);
+  videoPreviewThreadCloseButton?.addEventListener("click", resetVideoPreviewThreadSelection);
+  videoPreviewThreadForm?.addEventListener("submit", handleThreadReplySubmit);
+  threadRootEntry?.addEventListener("click", handleSocialCommentActionClick);
+  threadList?.addEventListener("click", handleSocialCommentActionClick);
+  threadCloseButton?.addEventListener("click", resetThreadDialog);
+  threadBackdrop?.addEventListener("click", resetThreadDialog);
+  threadForm?.addEventListener("submit", handleThreadReplySubmit);
   contributeCloseButton?.addEventListener("click", resetContributeDialog);
   contributeBackdrop?.addEventListener("click", resetContributeDialog);
   contributeModal?.addEventListener("click", handleContributeModalClick);
@@ -1105,6 +1159,11 @@ function handleMobileMenuToggleClick() {
 function handleWindowKeydown(event) {
   if (textPreviewModalOpen && event.key === "Escape") {
     resetTextPreview();
+    return;
+  }
+
+  if (threadModalOpen && event.key === "Escape") {
+    resetThreadDialog();
     return;
   }
 
@@ -1421,6 +1480,15 @@ function setVideoPreviewModalOpen(nextOpen) {
   if (videoPreviewModal) {
     videoPreviewModal.classList.toggle("hidden", !videoPreviewModalOpen);
     videoPreviewModal.classList.toggle("flex", videoPreviewModalOpen);
+  }
+}
+
+function setThreadModalOpen(nextOpen) {
+  threadModalOpen = Boolean(nextOpen);
+
+  if (threadModal) {
+    threadModal.classList.toggle("hidden", !threadModalOpen);
+    threadModal.classList.toggle("flex", threadModalOpen);
   }
 }
 
@@ -2032,12 +2100,62 @@ async function handleProfileActivitySubmit(event) {
   }
 }
 
+async function handleMediaItemLikeButtonClick() {
+  const context = buildMediaItemLikeContext(getCurrentVideoPreviewState());
+
+  if (!context?.likeKey || !db || !currentUser?.uid) {
+    setVideoPreviewCommentStatus("SIGN IN TO LIKE.");
+    return;
+  }
+
+  videoPreviewLikeButton?.toggleAttribute("disabled", true);
+
+  try {
+    const nextLiked = await toggleLikeAtRef(getMediaItemLikeDocRef(context, currentUser.uid));
+    applyLocalLikeState(context.likeKey, currentUser.uid, nextLiked);
+    renderAll();
+
+    if (threadModalOpen) {
+      renderThreadDialog();
+    }
+  } catch (error) {
+    setVideoPreviewCommentStatus(getErrorMessage(error, "Could not update like.").toUpperCase());
+  } finally {
+    videoPreviewLikeButton?.toggleAttribute("disabled", false);
+  }
+}
+
 function handleSocialCommentActionClick(event) {
+  const threadTrigger = event.target.closest("[data-action='open-thread']");
+
+  if (threadTrigger) {
+    event.preventDefault();
+    void openThreadDialog(threadTrigger);
+    return;
+  }
+
+  const editWallTrigger = event.target.closest("[data-action='edit-wall-post']");
+
+  if (editWallTrigger) {
+    event.preventDefault();
+    handleWallPostEditClick(editWallTrigger);
+    return;
+  }
+
   const editTrigger = event.target.closest("[data-action='edit-comment']");
 
   if (editTrigger) {
     event.preventDefault();
     handleSocialCommentEditClick(editTrigger);
+    return;
+  }
+
+  const cancelWallTrigger = event.target.closest("[data-action='cancel-wall-post-edit']");
+
+  if (cancelWallTrigger) {
+    event.preventDefault();
+    resetWallPostEdit();
+    renderVisibleSocialSurfaces();
     return;
   }
 
@@ -2050,11 +2168,90 @@ function handleSocialCommentActionClick(event) {
     return;
   }
 
+  const deleteWallTrigger = event.target.closest("[data-action='delete-wall-post']");
+
+  if (deleteWallTrigger) {
+    event.preventDefault();
+    void handleWallPostDeleteClick(deleteWallTrigger);
+    return;
+  }
+
   const deleteTrigger = event.target.closest("[data-action='delete-comment']");
 
   if (deleteTrigger) {
     event.preventDefault();
     void handleSocialCommentDeleteClick(deleteTrigger);
+    return;
+  }
+
+  const likeTrigger = event.target.closest("[data-action='toggle-social-like']");
+
+  if (likeTrigger) {
+    event.preventDefault();
+    void handleSocialLikeToggleClick(likeTrigger);
+    return;
+  }
+
+  const previewThreadTrigger = event.target.closest("[data-action='open-preview-thread']");
+
+  if (
+    previewThreadTrigger &&
+    !event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+  ) {
+    event.preventDefault();
+    handleVideoPreviewThreadClick(previewThreadTrigger);
+    return;
+  }
+
+  const sourceTrigger = event.target.closest("[data-action='open-activity-source']");
+
+  if (
+    sourceTrigger &&
+    !event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+  ) {
+    event.preventDefault();
+    void handleActivitySourceClick(sourceTrigger);
+    return;
+  }
+
+  const targetTrigger = event.target.closest("[data-action='open-activity-target']");
+
+  if (
+    targetTrigger &&
+    !event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+  ) {
+    event.preventDefault();
+    handleActivityTargetClick(targetTrigger);
+  }
+}
+
+async function handleSocialLikeToggleClick(trigger) {
+  const context = readSocialLikeActionContext(trigger);
+
+  if (!context?.targetKey || !db || !currentUser?.uid) {
+    setSocialSurfaceStatus("SIGN IN TO LIKE.");
+    return;
+  }
+
+  const likeRef = getSocialLikeDocRef(context, currentUser.uid);
+
+  if (!likeRef) {
+    return;
+  }
+
+  trigger.disabled = true;
+
+  try {
+    const nextLiked = await toggleLikeAtRef(likeRef);
+    applyLocalLikeState(context.targetKey, currentUser.uid, nextLiked);
+    renderAll();
+
+    if (threadModalOpen) {
+      renderThreadDialog();
+    }
+  } catch (error) {
+    setSocialSurfaceStatus(getErrorMessage(error, "Could not update like.").toUpperCase());
+    trigger.disabled = false;
   }
 }
 
@@ -2065,11 +2262,20 @@ function handleSocialCommentEditClick(trigger) {
     return;
   }
 
+  resetWallPostEdit();
   currentSocialCommentEditId = context.commentId;
   renderVisibleSocialSurfaces();
 }
 
 async function handleSocialCommentEditSubmit(event) {
+  const wallPostForm = event.target.closest("[data-action='save-wall-post-edit']");
+
+  if (wallPostForm) {
+    event.preventDefault();
+    await handleWallPostEditSubmit(wallPostForm);
+    return;
+  }
+
   const form = event.target.closest("[data-action='save-comment-edit']");
 
   if (!form) {
@@ -2107,6 +2313,48 @@ async function handleSocialCommentEditSubmit(event) {
   }
 }
 
+function handleWallPostEditClick(trigger) {
+  const context = readWallPostActionContext(trigger);
+
+  if (!context?.activityId || !canEditWallPostContext(context)) {
+    return;
+  }
+
+  resetSocialCommentEdit();
+  currentWallPostEditId = context.activityId;
+  renderVisibleSocialSurfaces();
+}
+
+async function handleWallPostEditSubmit(form) {
+  const context = readWallPostActionContext(form);
+
+  if (!context?.activityId || !canEditWallPostContext(context) || !db) {
+    return;
+  }
+
+  const bodyInput = form.querySelector("textarea[name='wallPostBody']");
+  const body = normalizeSocialBody(bodyInput?.value);
+
+  if (!body && !context.hasAttachment) {
+    setSocialSurfaceStatus("POST NEEDS TEXT OR IMAGE.");
+    return;
+  }
+
+  const submitButton = form.querySelector("button[type='submit']");
+  submitButton?.toggleAttribute("disabled", true);
+  setSocialSurfaceStatus("SAVING WALL POST.");
+
+  try {
+    await updateWallPostBody(context, body);
+    resetWallPostEdit();
+    setSocialSurfaceStatus("WALL POST UPDATED.");
+  } catch (error) {
+    setSocialSurfaceStatus(getErrorMessage(error, "Could not update wall post.").toUpperCase());
+  } finally {
+    submitButton?.toggleAttribute("disabled", false);
+  }
+}
+
 async function handleSocialCommentDeleteClick(trigger) {
   const context = readSocialCommentActionContext(trigger);
 
@@ -2132,6 +2380,272 @@ async function handleSocialCommentDeleteClick(trigger) {
   } catch (error) {
     setSocialSurfaceStatus(getErrorMessage(error, "Could not delete comment.").toUpperCase());
     trigger.disabled = false;
+  }
+}
+
+async function handleWallPostDeleteClick(trigger) {
+  const context = readWallPostActionContext(trigger);
+
+  if (!context?.activityId || !canDeleteWallPostContext(context) || !db) {
+    return;
+  }
+
+  const confirmed = window.confirm("Delete this wall post everywhere it appears?");
+
+  if (!confirmed) {
+    return;
+  }
+
+  trigger.disabled = true;
+  setSocialSurfaceStatus("DELETING WALL POST.");
+
+  try {
+    await deleteWallPost(context);
+    if (currentWallPostEditId === context.activityId) {
+      resetWallPostEdit();
+    }
+    setSocialSurfaceStatus("WALL POST DELETED.");
+  } catch (error) {
+    setSocialSurfaceStatus(getErrorMessage(error, "Could not delete wall post.").toUpperCase());
+    trigger.disabled = false;
+  }
+}
+
+function handleVideoPreviewThreadClick(trigger) {
+  const context = readThreadActionContext(trigger);
+  const previewState = getCurrentVideoPreviewState();
+
+  if (!context?.activityId || !previewState || !currentVideoPreviewContext) {
+    return;
+  }
+
+  const currentThreadId = String(previewState.threadCommentId || "");
+  const currentThreadOwnerUid = String(previewState.threadOwnerUid || "");
+
+  if (
+    currentThreadId === context.activityId &&
+    currentThreadOwnerUid === String(context.threadOwnerUid || "")
+  ) {
+    resetVideoPreviewThreadSelection();
+    return;
+  }
+
+  currentVideoPreviewContext.threadCommentId = context.activityId;
+  currentVideoPreviewContext.threadOwnerUid = String(context.threadOwnerUid || "");
+  syncActiveVideoPreviewThread(getCurrentVideoPreviewState());
+  renderVideoPreviewComments(getCurrentVideoPreviewState());
+}
+
+async function handleActivitySourceClick(trigger) {
+  const context = readActivitySourceContext(trigger);
+  const threadContext = readThreadActionContext(trigger);
+
+  if (!context?.tripId || !context.folderId || !context.itemId) {
+    return;
+  }
+
+  const item = await resolveActivitySourceItem(context);
+
+  if (!item) {
+    setSocialSurfaceStatus("SOURCE ITEM NO LONGER EXISTS.");
+    return;
+  }
+
+  if (item.kind === "text") {
+    openTextPreview(context.tripId, context.folderId, context.itemId);
+    return;
+  }
+
+  if (isPreviewableMediaItem(item)) {
+    openVideoPreview(context.tripId, context.folderId, context.itemId, "archive", {
+      threadCommentId: threadContext?.activityId || "",
+      threadOwnerUid: threadContext?.threadOwnerUid || "",
+    });
+    return;
+  }
+
+  setSocialSurfaceStatus("SOURCE ITEM CAN'T BE PREVIEWED.");
+}
+
+function handleActivityTargetClick(trigger) {
+  const context = readActivityTargetContext(trigger);
+  const targetUserUid = String(context?.targetUserUid || "");
+
+  if (!targetUserUid) {
+    return;
+  }
+
+  const profileView = getActiveProfileView();
+
+  if (profileView?.friend?.uid === targetUserUid) {
+    return;
+  }
+
+  if (targetUserUid === currentUser?.uid) {
+    beginRouteLoadingOverlay();
+    navigateToRoute(getOwnProfileRoute());
+    return;
+  }
+
+  const targetFriend = getFriendByUid(targetUserUid);
+
+  if (!targetFriend?.routeId) {
+    setSocialSurfaceStatus("COULD NOT OPEN TARGET WALL.");
+    return;
+  }
+
+  beginRouteLoadingOverlay();
+  navigateToRoute({ kind: ROUTE_PROFILE_PUBLIC, routeId: targetFriend.routeId });
+}
+
+async function resolveActivitySourceItem(context) {
+  const getCurrentItem = () =>
+    getItemsForFolder(context.tripId, context.folderId).find(
+      (item) => item.id === context.itemId
+    ) || null;
+
+  let item = getCurrentItem();
+
+  if (item || !db) {
+    return item;
+  }
+
+  try {
+    await loadFolderItems(context.tripId, context.folderId);
+  } catch (error) {
+    console.warn("Could not load activity source item.", error);
+  }
+
+  item = getCurrentItem();
+  return item;
+}
+
+async function openThreadDialog(trigger) {
+  const context = readThreadActionContext(trigger);
+
+  if (!context?.threadOwnerUid || !context?.activityId || !db) {
+    return;
+  }
+
+  const threadKey = buildThreadKey(context.threadOwnerUid, context.activityId);
+  currentThreadSurface = "modal";
+  currentThreadContext = context;
+  currentThreadRootEntry = null;
+  threadRepliesUnsubscribe?.();
+  threadRepliesUnsubscribe = null;
+  currentThreadRepliesKey = "";
+  threadForm?.reset();
+  setThreadStatusMessage("LOADING THREAD.");
+  setThreadModalOpen(true);
+  renderThreadDialog();
+
+  try {
+    const threadSnapshot = await getDoc(
+      getActivityDocRef(context.threadOwnerUid, context.activityId)
+    );
+
+    if (buildThreadKey(currentThreadContext?.threadOwnerUid, currentThreadContext?.activityId) !== threadKey) {
+      return;
+    }
+
+    if (!threadSnapshot.exists()) {
+      throw new Error("Thread no longer exists.");
+    }
+
+    currentThreadRootEntry = normalizeThreadRootEntry({
+      id: threadSnapshot.id,
+      ...threadSnapshot.data(),
+    });
+    syncThreadRepliesSubscription();
+    renderThreadDialog();
+  } catch (error) {
+    currentThreadRootEntry = null;
+    setThreadStatusMessage(getErrorMessage(error, "Could not load thread.").toUpperCase());
+    renderThreadDialog();
+  }
+}
+
+function getThreadReplyComposer(form) {
+  const isPreviewComposer = form === videoPreviewThreadForm;
+
+  return {
+    form,
+    bodyInput: isPreviewComposer ? videoPreviewThreadBodyInput : threadBodyInput,
+    imageInput: isPreviewComposer ? videoPreviewThreadImageInput : threadImageInput,
+    submitButton: isPreviewComposer ? videoPreviewThreadSubmit : threadSubmit,
+  };
+}
+
+async function handleThreadReplySubmit(event) {
+  event.preventDefault();
+  const form = event.target.closest("form");
+  const composer = form ? getThreadReplyComposer(form) : null;
+
+  if (
+    !composer ||
+    !db ||
+    !currentUser?.uid ||
+    !currentThreadContext ||
+    !currentThreadRootEntry ||
+    !canUploadMedia()
+  ) {
+    setThreadStatusMessage("SIGN IN TO REPLY.");
+    return;
+  }
+
+  const body = normalizeSocialBody(composer.bodyInput?.value);
+  const attachmentFile = composer.imageInput?.files?.[0] || null;
+
+  if (!body && !attachmentFile) {
+    setThreadStatusMessage("ADD TEXT OR IMAGE.");
+    return;
+  }
+
+  composer.submitButton?.toggleAttribute("disabled", true);
+  setThreadStatusMessage("POSTING REPLY.");
+
+  try {
+    const attachment = await uploadSocialAttachment(attachmentFile, "thread-reply");
+    const actor = buildActivityActorFields();
+    const replyId = `reply-${buildUniqueStamp()}`;
+    const createdAtMs = Date.now();
+
+    await setDoc(
+      doc(
+        db,
+        runtimeConfig.collections.users,
+        currentThreadContext.threadOwnerUid,
+        "activity",
+        currentThreadContext.activityId,
+        "replies",
+        replyId
+      ),
+      {
+        id: replyId,
+        type: "thread-reply",
+        parentType: currentThreadRootEntry.type,
+        body,
+        attachmentURL: attachment.attachmentURL,
+        attachmentStoragePath: attachment.attachmentStoragePath,
+        attachmentMimeType: attachment.attachmentMimeType,
+        attachmentName: attachment.attachmentName,
+        actorUid: actor.actorUid,
+        actorLabel: actor.actorLabel,
+        actorRouteId: actor.actorRouteId,
+        actorPhotoURL: actor.actorPhotoURL,
+        createdAt: serverTimestamp(),
+        createdAtMs,
+        updatedAt: serverTimestamp(),
+        updatedAtMs: createdAtMs,
+      }
+    );
+
+    composer.form?.reset();
+    setThreadStatusMessage("REPLY POSTED.");
+  } catch (error) {
+    setThreadStatusMessage(getErrorMessage(error, "Could not post reply.").toUpperCase());
+  } finally {
+    composer.submitButton?.toggleAttribute("disabled", false);
   }
 }
 
@@ -2167,14 +2681,51 @@ async function updateSocialCommentBody(context, body) {
   await batch.commit();
 }
 
+async function updateWallPostBody(context, body) {
+  const wallPostRefs = getWallPostDocRefs(context);
+
+  if (wallPostRefs.length === 0) {
+    throw new Error("Wall post is missing.");
+  }
+
+  const snapshots = await Promise.all(wallPostRefs.map((ref) => getDoc(ref)));
+
+  if (!snapshots.some((snapshot) => snapshot.exists())) {
+    throw new Error("Wall post no longer exists.");
+  }
+
+  const nowMs = Date.now();
+  const patch = {
+    body,
+    editedAt: serverTimestamp(),
+    editedAtMs: nowMs,
+    updatedAt: serverTimestamp(),
+    updatedAtMs: nowMs,
+  };
+  const batch = writeBatch(db);
+
+  snapshots.forEach((snapshot, index) => {
+    if (snapshot.exists()) {
+      batch.set(wallPostRefs[index], patch, { merge: true });
+    }
+  });
+
+  await batch.commit();
+}
+
 async function deleteSocialComment(context) {
   const commentRef = getMediaCommentDocRef(context);
   const activityUserId = context.activityUserId || context.authorUid || currentUser?.uid || "";
   const activityRef = activityUserId ? getActivityDocRef(activityUserId, context.commentId) : null;
+  const threadContext = {
+    threadOwnerUid: activityUserId,
+    activityId: context.commentId,
+  };
   const [commentSnapshot, activitySnapshot] = await Promise.all([
     getDoc(commentRef),
     activityRef ? getDoc(activityRef) : Promise.resolve(null),
   ]);
+  const threadReplyDeletePlan = await collectThreadReplyDeletePlan(threadContext);
   const batch = writeBatch(db);
 
   if (commentSnapshot.exists()) {
@@ -2185,12 +2736,97 @@ async function deleteSocialComment(context) {
     batch.delete(activityRef);
   }
 
+  threadReplyDeletePlan.replyDocs.forEach((replyDoc) => {
+    batch.delete(replyDoc.ref);
+  });
+
   await batch.commit();
 
   try {
     await deleteSocialAttachmentIfPossible(context.attachmentStoragePath);
+    await deleteSocialAttachmentPaths(threadReplyDeletePlan.attachmentPaths);
   } catch (error) {
     console.warn("Could not delete social attachment.", error);
+  }
+
+  resetActiveThreadForContext(threadContext);
+}
+
+async function deleteWallPost(context) {
+  const wallPostRefs = getWallPostDocRefs(context);
+  const threadContext = {
+    threadOwnerUid: context.targetUserUid,
+    activityId: context.activityId,
+  };
+
+  if (wallPostRefs.length === 0) {
+    throw new Error("Wall post is missing.");
+  }
+
+  const snapshots = await Promise.all(wallPostRefs.map((ref) => getDoc(ref)));
+  const threadReplyDeletePlan = await collectThreadReplyDeletePlan(threadContext);
+  const batch = writeBatch(db);
+  let hasExistingWallPost = false;
+
+  snapshots.forEach((snapshot, index) => {
+    if (snapshot.exists()) {
+      batch.delete(wallPostRefs[index]);
+      hasExistingWallPost = true;
+    }
+  });
+
+  threadReplyDeletePlan.replyDocs.forEach((replyDoc) => {
+    batch.delete(replyDoc.ref);
+  });
+
+  if (!hasExistingWallPost) {
+    throw new Error("Wall post no longer exists.");
+  }
+
+  await batch.commit();
+
+  try {
+    await deleteSocialAttachmentIfPossible(context.attachmentStoragePath);
+    await deleteSocialAttachmentPaths(threadReplyDeletePlan.attachmentPaths);
+  } catch (error) {
+    console.warn("Could not delete social attachment.", error);
+  }
+
+  resetActiveThreadForContext(threadContext);
+}
+
+async function collectThreadReplyDeletePlan(context) {
+  if (!db || !runtimeConfig?.collections?.users || !context?.threadOwnerUid || !context?.activityId) {
+    return {
+      replyDocs: [],
+      attachmentPaths: [],
+    };
+  }
+
+  const repliesSnapshot = await getDocs(
+    collection(
+      db,
+      runtimeConfig.collections.users,
+      context.threadOwnerUid,
+      "activity",
+      context.activityId,
+      "replies"
+    )
+  );
+
+  return {
+    replyDocs: repliesSnapshot.docs,
+    attachmentPaths: repliesSnapshot.docs
+      .map((replyDoc) => String(replyDoc.data()?.attachmentStoragePath || ""))
+      .filter(Boolean),
+  };
+}
+
+async function deleteSocialAttachmentPaths(paths) {
+  const uniquePaths = [...new Set((paths || []).filter(Boolean))];
+
+  for (const storagePath of uniquePaths) {
+    await deleteSocialAttachmentIfPossible(storagePath);
   }
 }
 
@@ -2292,6 +2928,138 @@ function subscribeToFriends() {
       renderFriendsPanel();
     }
   );
+}
+
+function subscribeToInteractionAggregates() {
+  if (!db) {
+    return;
+  }
+
+  subscribeToMediaCommentAggregates();
+  subscribeToThreadReplyAggregates();
+  subscribeToLikeAggregates();
+}
+
+function subscribeToMediaCommentAggregates() {
+  mediaCommentAggregateUnsubscribe?.();
+
+  mediaCommentAggregateUnsubscribe = onSnapshot(
+    collectionGroup(db, "comments"),
+    (snapshot) => {
+      const nextCommentCountsByItemKey = new Map();
+      const nextMediaItemKeyByThreadKey = new Map();
+
+      snapshot.docs.forEach((commentDoc) => {
+        const comment = normalizeMediaComment({ id: commentDoc.id, ...commentDoc.data() });
+        const itemKey = buildMediaItemKey(comment.tripId, comment.folderId, comment.itemId);
+        const threadKey = buildThreadKey(comment.authorUid, comment.id);
+
+        if (itemKey) {
+          nextCommentCountsByItemKey.set(
+            itemKey,
+            Number(nextCommentCountsByItemKey.get(itemKey) || 0) + 1
+          );
+        }
+
+        if (itemKey && threadKey) {
+          nextMediaItemKeyByThreadKey.set(threadKey, itemKey);
+        }
+      });
+
+      mediaCommentCountsByItemKey = nextCommentCountsByItemKey;
+      mediaItemKeyByThreadKey = nextMediaItemKeyByThreadKey;
+      rebuildMediaReplyCountsByItemKey();
+      renderAll();
+    },
+    (error) => {
+      console.warn("Could not subscribe to media comment aggregates.", error);
+    }
+  );
+}
+
+function subscribeToThreadReplyAggregates() {
+  threadReplyAggregateUnsubscribe?.();
+
+  threadReplyAggregateUnsubscribe = onSnapshot(
+    collectionGroup(db, "replies"),
+    (snapshot) => {
+      const nextReplyCountsByThreadKey = new Map();
+
+      snapshot.docs.forEach((replyDoc) => {
+        const pathSegments = replyDoc.ref.path.split("/");
+        const threadOwnerUid = String(pathSegments[1] || "");
+        const activityId = String(pathSegments[3] || "");
+        const threadKey = buildThreadKey(threadOwnerUid, activityId);
+
+        if (!threadKey) {
+          return;
+        }
+
+        nextReplyCountsByThreadKey.set(
+          threadKey,
+          Number(nextReplyCountsByThreadKey.get(threadKey) || 0) + 1
+        );
+      });
+
+      replyCountsByThreadKey = nextReplyCountsByThreadKey;
+      rebuildMediaReplyCountsByItemKey();
+      renderAll();
+    },
+    (error) => {
+      console.warn("Could not subscribe to thread reply aggregates.", error);
+    }
+  );
+}
+
+function subscribeToLikeAggregates() {
+  likeAggregateUnsubscribe?.();
+
+  likeAggregateUnsubscribe = onSnapshot(
+    collectionGroup(db, "likes"),
+    (snapshot) => {
+      const nextLikeActorsByTargetKey = new Map();
+
+      snapshot.docs.forEach((likeDoc) => {
+        const targetKey = buildLikeTargetKeyFromPath(likeDoc.ref.path);
+        const actorUid = String(likeDoc.id || "");
+
+        if (!targetKey || !actorUid) {
+          return;
+        }
+
+        if (!nextLikeActorsByTargetKey.has(targetKey)) {
+          nextLikeActorsByTargetKey.set(targetKey, new Set());
+        }
+
+        nextLikeActorsByTargetKey.get(targetKey).add(actorUid);
+      });
+
+      likeActorsByTargetKey = nextLikeActorsByTargetKey;
+      renderAll();
+    },
+    (error) => {
+      console.warn("Could not subscribe to like aggregates.", error);
+    }
+  );
+}
+
+function rebuildMediaReplyCountsByItemKey() {
+  const nextMediaReplyCountsByItemKey = new Map();
+
+  replyCountsByThreadKey.forEach((replyCount, threadKey) => {
+    const itemKey = mediaItemKeyByThreadKey.get(threadKey);
+
+    if (!itemKey) {
+      return;
+    }
+
+    nextMediaReplyCountsByItemKey.set(
+      itemKey,
+      Number(nextMediaReplyCountsByItemKey.get(itemKey) || 0) + Number(replyCount || 0)
+    );
+  });
+
+  mediaReplyCountsByItemKey = nextMediaReplyCountsByItemKey;
 }
 
 function syncFolderSubscriptions() {
@@ -3729,12 +4497,19 @@ async function handleMoveItemSubmit(event) {
   }
 }
 
-function openVideoPreview(tripId, folderId, itemId, view = "archive") {
+function openVideoPreview(tripId, folderId, itemId, view = "archive", options = {}) {
   if (!videoPreviewPlayer || !tripId || !folderId || !itemId) {
     return;
   }
 
-  currentVideoPreviewContext = { tripId, folderId, itemId, view };
+  currentVideoPreviewContext = {
+    tripId,
+    folderId,
+    itemId,
+    view,
+    threadCommentId: String(options?.threadCommentId || ""),
+    threadOwnerUid: String(options?.threadOwnerUid || ""),
+  };
   const previewState = getCurrentVideoPreviewState();
 
   if (!previewState) {
@@ -3774,6 +4549,7 @@ function navigateVideoPreview(direction) {
 }
 
 function resetVideoPreview() {
+  resetVideoPreviewThreadSelection();
   currentVideoPreviewContext = null;
   syncVideoPreviewNavigation(null);
   syncVideoPreviewMedia(null);
@@ -3800,6 +4576,8 @@ function getCurrentVideoPreviewState() {
     folderId,
     itemId,
     view,
+    threadCommentId: String(currentVideoPreviewContext.threadCommentId || ""),
+    threadOwnerUid: String(currentVideoPreviewContext.threadOwnerUid || ""),
     items,
     currentIndex,
     currentItem: items[currentIndex],
@@ -3984,9 +4762,64 @@ function buildMediaCommentKey(tripId, folderId, itemId) {
   return `${tripId}:${folderId}:${itemId}`;
 }
 
+function buildMediaItemKey(tripId, folderId, itemId) {
+  return tripId && folderId && itemId
+    ? `media-item:${tripId}:${folderId}:${itemId}`
+    : "";
+}
+
+function buildMediaItemKeyFromItem(item, tripId, folderId) {
+  const sourceFolderId = resolveItemSourceFolderId(item, folderId);
+  return buildMediaItemKey(tripId, sourceFolderId, item?.id);
+}
+
+function buildMediaCommentLikeKey(tripId, folderId, itemId, commentId) {
+  return tripId && folderId && itemId && commentId
+    ? `media-comment:${tripId}:${folderId}:${itemId}:${commentId}`
+    : "";
+}
+
+function buildActivityLikeKey(threadOwnerUid, activityId) {
+  return threadOwnerUid && activityId
+    ? `activity-root:${threadOwnerUid}:${activityId}`
+    : "";
+}
+
+function buildThreadReplyLikeKey(threadOwnerUid, activityId, replyId) {
+  return threadOwnerUid && activityId && replyId
+    ? `thread-reply:${threadOwnerUid}:${activityId}:${replyId}`
+    : "";
+}
+
+function buildLikeTargetKeyFromPath(path) {
+  const segments = String(path || "").split("/");
+
+  if (segments.length === 8 && segments[0] === "trips" && segments[6] === "likes") {
+    return buildMediaItemKey(segments[1], segments[3], segments[5]);
+  }
+
+  if (segments.length === 10 && segments[0] === "trips" && segments[6] === "comments" && segments[8] === "likes") {
+    return buildMediaCommentLikeKey(segments[1], segments[3], segments[5], segments[7]);
+  }
+
+  if (segments.length === 6 && segments[0] === "users" && segments[4] === "likes") {
+    return buildActivityLikeKey(segments[1], segments[3]);
+  }
+
+  if (segments.length === 8 && segments[0] === "users" && segments[4] === "replies" && segments[6] === "likes") {
+    return buildThreadReplyLikeKey(segments[1], segments[3], segments[5]);
+  }
+
+  return "";
+}
+
 function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()) {
   const context = buildMediaCommentContext(previewState);
   const comments = context ? mediaCommentsByKey.get(context.key) || [] : [];
+  syncActiveVideoPreviewThread(previewState, comments);
+  const selectedThreadId = currentThreadSurface === "preview"
+    ? String(previewState?.threadCommentId || "")
+    : "";
   const canComment = Boolean(context && db && currentUser?.uid && canUploadMedia());
 
   if (videoPreviewCommentForm) {
@@ -4001,9 +4834,16 @@ function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()
     videoPreviewCommentsList.innerHTML = !context
       ? ""
       : comments.length > 0
-        ? comments.map(renderMediaComment).join("")
+        ? comments
+            .map((comment) =>
+              renderMediaComment(comment, { selectedThread: comment.id === selectedThreadId })
+            )
+            .join("")
         : renderEmptySocialState("NO COMMENTS YET.");
   }
+
+  renderVideoPreviewInteractionBar(previewState);
+  renderVideoPreviewThreadPanel(previewState);
 
   if (!context) {
     setVideoPreviewCommentStatus("");
@@ -4018,7 +4858,35 @@ function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()
   setVideoPreviewCommentStatus(canComment ? "NO COMMENTS YET." : "SIGN IN TO COMMENT.");
 }
 
-function renderMediaComment(comment) {
+function renderVideoPreviewInteractionBar(previewState = getCurrentVideoPreviewState()) {
+  const item = previewState?.currentItem || null;
+  const counts = item
+    ? getMediaItemInteractionCounts(item, previewState.tripId, previewState.folderId)
+    : null;
+  const liked = Boolean(counts?.itemKey && isTargetLikedByCurrentUser(counts.itemKey));
+
+  if (videoPreviewSocialSummary) {
+    videoPreviewSocialSummary.innerHTML = counts
+      ? [
+          renderSocialMetricBadge(counts.likeCount, "LIKE"),
+          renderSocialMetricBadge(counts.commentCount, "COMMENT"),
+          renderSocialMetricBadge(counts.replyCount, "REPLY", counts.replyCount > 0 ? "highlight" : "default"),
+        ].join("")
+      : "";
+  }
+
+  if (videoPreviewLikeButton) {
+    videoPreviewLikeButton.textContent = liked ? "Liked" : "Like";
+    videoPreviewLikeButton.className = liked
+      ? "shrink-0 border border-amber-200/35 bg-amber-100/[0.07] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-amber-50 transition hover:border-amber-100/55 hover:bg-amber-100/[0.12] disabled:cursor-not-allowed disabled:opacity-45"
+      : "shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45";
+    videoPreviewLikeButton.disabled = !counts?.itemKey || !currentUser?.uid;
+  }
+}
+
+function renderMediaComment(comment, options = {}) {
+  const context = buildThreadActionContext(comment);
+  const isThreadSelected = Boolean(options?.selectedThread);
   const actorMarkup = renderSocialActorLink(
     comment.authorLabel,
     comment.authorRouteId,
@@ -4028,12 +4896,27 @@ function renderMediaComment(comment) {
   const bodyMarkup = isEditingSocialComment(comment)
     ? renderSocialCommentEditForm(comment)
     : `${renderSocialBody(comment.body)}${renderSocialAttachment(comment)}`;
+  const interactionMarkup = renderSocialInteractionBar(comment);
   const editedMarkup = comment.editedAtMs
     ? `<span class="text-stone-400/42">EDITED</span>`
     : "";
+  const articleClass = isThreadSelected
+    ? "cursor-pointer border border-amber-200/30 bg-amber-100/[0.05] p-3 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.1)] transition hover:border-amber-200/45"
+    : "cursor-pointer border border-white/10 bg-black/24 p-3 transition hover:border-white/20 hover:bg-black/30";
+  const articleActionAttrs =
+    !isEditingSocialComment(comment) && context.threadOwnerUid && context.activityId
+      ? `data-action="open-preview-thread" ${renderThreadActionAttributes(context)} title="Show thread"`
+      : "";
+  const threadLabelMarkup = isThreadSelected
+    ? `
+      <p class="mt-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.18em] text-amber-100/78">
+        Thread Selected
+      </p>
+    `
+    : "";
 
   return `
-    <article class="border border-white/10 bg-black/24 p-3">
+    <article class="${articleClass}" ${articleActionAttrs}>
       <div class="flex items-start gap-3">
         <img src="${escapeHtml(getSocialPhotoUrl(comment.authorPhotoURL))}" alt="${escapeHtml(comment.authorLabel)}" class="h-9 w-9 shrink-0 border border-white/10 bg-black object-cover object-center">
         <div class="min-w-0 flex-1">
@@ -4045,7 +4928,9 @@ function renderMediaComment(comment) {
             </div>
             ${controlsMarkup}
           </div>
+          ${threadLabelMarkup}
           ${bodyMarkup}
+          ${interactionMarkup}
         </div>
       </div>
     </article>
@@ -4161,16 +5046,40 @@ function renderActivityEntry(entry, profileFriend, isSelf = false) {
     "text-stone-100 transition hover:text-white hover:underline"
   );
   const actionLabel = buildActivityActionLabel(entry, profileFriend, isSelf);
-  const controlsMarkup = entry.type === "media-comment" ? renderSocialCommentControls(entry) : "";
+  const articleActionAttrs = entry.type === "media-comment"
+    ? renderActivitySourceAttributes(entry)
+    : entry.type === "wall-post"
+      ? renderActivityTargetAttributes(entry)
+    : "";
+  const articleClass = entry.type === "media-comment"
+    ? "border border-white/10 bg-black/24 p-3 transition hover:border-white/20 hover:bg-black/30 sm:p-4 cursor-pointer"
+    : entry.type === "wall-post"
+      ? "border border-white/10 bg-black/24 p-3 transition hover:border-white/20 hover:bg-black/30 sm:p-4 cursor-pointer"
+    : "border border-white/10 bg-black/24 p-3 sm:p-4";
+  const controlsMarkup = entry.type === "media-comment"
+    ? renderSocialCommentControls(entry)
+    : entry.type === "wall-post"
+      ? renderWallPostControls(entry)
+      : "";
+  const threadButtonMarkup = entry.type === "wall-post" ? renderThreadOpenButton(entry) : "";
   const bodyMarkup = entry.type === "media-comment" && isEditingSocialComment(entry)
     ? renderSocialCommentEditForm(entry)
-    : `${renderSocialBody(entry.body)}${renderSocialAttachment(entry)}`;
+    : entry.type === "wall-post" && isEditingWallPost(entry)
+      ? renderWallPostEditForm(entry)
+      : `${renderSocialBody(entry.body)}${renderSocialAttachment(entry)}`;
+  const interactionMarkup = renderSocialInteractionBar(entry);
   const editedMarkup = entry.editedAtMs
     ? `<span class="text-stone-400/42">EDITED</span>`
     : "";
 
   return `
-    <article class="border border-white/10 bg-black/24 p-3 sm:p-4">
+    <article class="${articleClass}" ${articleActionAttrs}${
+      entry.type === "media-comment"
+        ? ' title="Open source item and thread"'
+        : entry.type === "wall-post"
+          ? ' title="Open target wall"'
+          : ""
+    }>
       <div class="flex items-start gap-3">
         <img src="${escapeHtml(getSocialPhotoUrl(entry.actorPhotoURL))}" alt="${escapeHtml(entry.actorLabel)}" class="h-10 w-10 shrink-0 border border-white/10 bg-black object-cover object-center">
         <div class="min-w-0 flex-1">
@@ -4184,6 +5093,8 @@ function renderActivityEntry(entry, profileFriend, isSelf = false) {
           </div>
           <p class="mt-1 break-words font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] text-stone-300/58">${escapeHtml(actionLabel)}</p>
           ${bodyMarkup}
+          ${interactionMarkup}
+          ${threadButtonMarkup}
         </div>
       </div>
     </article>
@@ -4198,6 +5109,14 @@ function buildActivityActionLabel(entry, profileFriend, isSelf = false) {
   }
 
   if (entry.type === "wall-post") {
+    const targetLabel = normalizeSocialLabel(
+      entry.targetUserLabel || getFriendLabel(getFriendByUid(entry.targetUserUid))
+    );
+
+    if (entry.targetUserUid && profileFriend?.uid && entry.targetUserUid !== profileFriend.uid) {
+      return `WROTE ON ${targetLabel.toUpperCase()}'S WALL`;
+    }
+
     if (entry.actorUid && entry.actorUid === profileFriend?.uid) {
       return isSelf ? "POSTED ON YOUR WALL" : "POSTED ON THEIR WALL";
     }
@@ -4260,6 +5179,115 @@ function normalizeActivityEntry(entry) {
   };
 }
 
+function buildMediaItemLikeContext(previewState = getCurrentVideoPreviewState()) {
+  const item = previewState?.currentItem || null;
+  const sourceFolderId = resolveItemSourceFolderId(item, previewState?.folderId);
+
+  if (!previewState?.tripId || !sourceFolderId || !item?.id) {
+    return null;
+  }
+
+  return {
+    tripId: previewState.tripId,
+    folderId: sourceFolderId,
+    itemId: item.id,
+    likeKey: buildMediaItemKey(previewState.tripId, sourceFolderId, item.id),
+  };
+}
+
+function normalizeThreadRootEntry(entry) {
+  return {
+    id: String(entry?.id || ""),
+    type: String(entry?.type || "media-comment"),
+    body: normalizeSocialBody(entry?.body),
+    actorUid: String(entry?.actorUid || entry?.authorUid || ""),
+    actorLabel: normalizeSocialLabel(entry?.actorLabel || entry?.authorLabel),
+    actorRouteId: normalizeRouteId(entry?.actorRouteId || entry?.authorRouteId),
+    actorPhotoURL: String(entry?.actorPhotoURL || entry?.authorPhotoURL || ""),
+    targetUserUid: String(entry?.targetUserUid || ""),
+    targetUserLabel: normalizeSocialLabel(entry?.targetUserLabel),
+    itemName: String(entry?.itemName || ""),
+    sourceLabel: String(entry?.sourceLabel || ""),
+    attachmentURL: String(entry?.attachmentURL || ""),
+    attachmentStoragePath: String(entry?.attachmentStoragePath || ""),
+    attachmentMimeType: String(entry?.attachmentMimeType || ""),
+    attachmentName: String(entry?.attachmentName || ""),
+    createdAtMs: coerceTimestampToMs(entry?.createdAt, entry?.createdAtMs),
+    editedAtMs: coerceTimestampToMs(entry?.editedAt, entry?.editedAtMs),
+  };
+}
+
+function normalizeThreadReply(reply) {
+  return {
+    id: String(reply?.id || ""),
+    type: "thread-reply",
+    parentType: String(reply?.parentType || ""),
+    body: normalizeSocialBody(reply?.body),
+    actorUid: String(reply?.actorUid || ""),
+    actorLabel: normalizeSocialLabel(reply?.actorLabel),
+    actorRouteId: normalizeRouteId(reply?.actorRouteId),
+    actorPhotoURL: String(reply?.actorPhotoURL || ""),
+    attachmentURL: String(reply?.attachmentURL || ""),
+    attachmentStoragePath: String(reply?.attachmentStoragePath || ""),
+    attachmentMimeType: String(reply?.attachmentMimeType || ""),
+    attachmentName: String(reply?.attachmentName || ""),
+    threadOwnerUid: String(reply?.threadOwnerUid || ""),
+    activityId: String(reply?.activityId || ""),
+    createdAtMs: coerceTimestampToMs(reply?.createdAt, reply?.createdAtMs),
+    editedAtMs: coerceTimestampToMs(reply?.editedAt, reply?.editedAtMs),
+  };
+}
+
+function renderSocialLikeButton(entry) {
+  const context = buildSocialLikeActionContext(entry);
+
+  if (!context?.targetKey) {
+    return "";
+  }
+
+  const liked = isTargetLikedByCurrentUser(context.targetKey);
+
+  return `
+    <button
+      type="button"
+      data-action="toggle-social-like"
+      ${renderSocialLikeActionAttributes(context)}
+      class="${getSocialLikeButtonClass(liked)}"
+      ${currentUser?.uid ? "" : "disabled"}
+    >
+      ${liked ? "Liked" : "Like"}
+    </button>
+  `;
+}
+
+function renderSocialInteractionBar(entry, options = {}) {
+  const likeContext = buildSocialLikeActionContext(entry);
+  const likeButtonMarkup = renderSocialLikeButton(entry);
+  const likeBadgeMarkup = likeContext?.targetKey
+    ? renderSocialMetricBadge(getLikeCountForTargetKey(likeContext.targetKey), "LIKE")
+    : "";
+  const shouldShowReplyCount = options.includeReplyCount !== false && entry?.type !== "thread-reply";
+  const replyBadgeMarkup = shouldShowReplyCount
+    ? renderSocialMetricBadge(
+        getReplyCountForEntry(entry),
+        "REPLY",
+        getReplyCountForEntry(entry) > 0 ? "highlight" : "default"
+      )
+    : "";
+
+  if (!likeButtonMarkup && !likeBadgeMarkup && !replyBadgeMarkup) {
+    return "";
+  }
+
+  return `
+    <div class="mt-3 flex flex-wrap items-center gap-1.5">
+      ${likeButtonMarkup}
+      ${likeBadgeMarkup}
+      ${replyBadgeMarkup}
+    </div>
+  `;
+}
+
 function renderSocialCommentControls(entry) {
   if (entry?.type !== "media-comment") {
     return "";
@@ -4306,6 +5334,177 @@ function renderSocialCommentControls(entry) {
   `;
 }
 
+function renderWallPostControls(entry) {
+  if (entry?.type !== "wall-post") {
+    return "";
+  }
+
+  const context = buildWallPostActionContext(entry);
+  const canEdit = canEditWallPostContext(context);
+  const canDelete = canDeleteWallPostContext(context);
+
+  if (!canEdit && !canDelete) {
+    return "";
+  }
+
+  const buttonClass = getSocialMenuItemButtonClass();
+  const deleteButtonClass = getSocialMenuItemButtonClass("delete");
+  const contextAttrs = renderWallPostActionAttributes(context);
+
+  return `
+    <details class="relative shrink-0">
+      <summary class="flex h-7 w-7 cursor-pointer list-none items-center justify-center border border-white/10 bg-black/40 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] leading-none tracking-[0.08em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.08] [&::-webkit-details-marker]:hidden" aria-label="Wall post actions">
+        ...
+      </summary>
+      <div class="absolute right-0 top-[calc(100%+0.35rem)] z-30 w-28 border border-white/12 bg-neutral-950/98 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.45)]">
+        ${
+          canEdit
+            ? `
+              <button type="button" data-action="edit-wall-post" ${contextAttrs} class="${buttonClass}">
+                Edit
+              </button>
+            `
+            : ""
+        }
+        ${
+          canDelete
+            ? `
+              <button type="button" data-action="delete-wall-post" ${contextAttrs} class="${deleteButtonClass}">
+                Delete
+              </button>
+            `
+            : ""
+        }
+      </div>
+    </details>
+  `;
+}
+
+function renderThreadRootEntry(entry) {
+  const actorMarkup = renderSocialActorLink(
+    entry.actorLabel,
+    entry.actorRouteId,
+    "text-stone-100 transition hover:text-white hover:underline"
+  );
+  const actionLabel = buildThreadRootActionLabel(entry);
+  const interactionMarkup = renderSocialInteractionBar(entry);
+  const editedMarkup = entry.editedAtMs
+    ? `<span class="text-stone-400/42">EDITED</span>`
+    : "";
+
+  return `
+    <article class="border border-white/10 bg-black/20 p-3 sm:p-4">
+      <div class="flex items-start gap-3">
+        <img src="${escapeHtml(getSocialPhotoUrl(entry.actorPhotoURL))}" alt="${escapeHtml(entry.actorLabel)}" class="h-10 w-10 shrink-0 border border-white/10 bg-black object-cover object-center">
+        <div class="min-w-0 flex-1">
+          <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em]">
+            ${actorMarkup}
+            <span class="text-stone-400/58">${escapeHtml(formatActivityTime(entry.createdAtMs))}</span>
+            ${editedMarkup}
+          </div>
+          <p class="mt-1 break-words font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] text-stone-300/58">${escapeHtml(actionLabel)}</p>
+          ${renderSocialBody(entry.body)}
+          ${renderSocialAttachment(entry)}
+          ${interactionMarkup}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderThreadReply(reply) {
+  const actorMarkup = renderSocialActorLink(
+    reply.actorLabel,
+    reply.actorRouteId,
+    "text-stone-100 transition hover:text-white hover:underline"
+  );
+  const interactionMarkup = renderSocialInteractionBar(reply, { includeReplyCount: false });
+  const editedMarkup = reply.editedAtMs
+    ? `<span class="text-stone-400/42">EDITED</span>`
+    : "";
+
+  return `
+    <article class="border border-white/10 bg-black/20 p-3">
+      <div class="flex items-start gap-3">
+        <img src="${escapeHtml(getSocialPhotoUrl(reply.actorPhotoURL))}" alt="${escapeHtml(reply.actorLabel)}" class="h-9 w-9 shrink-0 border border-white/10 bg-black object-cover object-center">
+        <div class="min-w-0 flex-1">
+          <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.16em]">
+            ${actorMarkup}
+            <span class="text-stone-400/58">${escapeHtml(formatActivityTime(reply.createdAtMs))}</span>
+            ${editedMarkup}
+          </div>
+          ${renderSocialBody(reply.body)}
+          ${renderSocialAttachment(reply)}
+          ${interactionMarkup}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function buildThreadRootActionLabel(entry) {
+  if (entry?.type === "media-comment") {
+    const itemName = entry.itemName ? ` // ${entry.itemName}` : "";
+    const sourceLabel = entry.sourceLabel ? ` // ${entry.sourceLabel}` : "";
+    return `COMMENTED ON MEDIA${itemName}${sourceLabel}`;
+  }
+
+  if (entry?.type === "wall-post") {
+    const targetFriend = getFriendByUid(entry.targetUserUid);
+    const targetLabel = normalizeSocialLabel(
+      entry.targetUserLabel || getFriendLabel(targetFriend)
+    );
+    return `WROTE ON ${targetLabel.toUpperCase()}'S WALL`;
+  }
+
+  return "THREAD";
+}
+
+function buildThreadTitle(entry) {
+  if (entry?.type === "wall-post") {
+    return "Wall Thread";
+  }
+
+  if (entry?.type === "media-comment") {
+    return "Comment Thread";
+  }
+
+  return "Comment Thread";
+}
+
+function buildThreadContextLabel(entry) {
+  if (entry?.type === "media-comment") {
+    const parts = [entry.itemName, entry.sourceLabel].filter(Boolean);
+    return parts.join(" // ");
+  }
+
+  if (entry?.type === "wall-post") {
+    const targetFriend = getFriendByUid(entry.targetUserUid);
+    const targetLabel = normalizeSocialLabel(
+      entry.targetUserLabel || getFriendLabel(targetFriend)
+    );
+    return `WALL // ${targetLabel}`;
+  }
+
+  return "";
+}
+
+function buildPreviewThreadContextLabel(entry) {
+  if (!entry) {
+    return "";
+  }
+
+  const actorLabel = normalizeSocialLabel(entry.actorLabel);
+  const sourceLabel = buildThreadContextLabel(entry);
+  const parts = [`COMMENT BY ${actorLabel.toUpperCase()}`];
+
+  if (sourceLabel) {
+    parts.push(sourceLabel);
+  }
+
+  return parts.join(" // ");
+}
+
 function renderSocialCommentEditForm(entry) {
   const context = buildSocialCommentActionContext(entry);
   const contextAttrs = renderSocialCommentActionAttributes(context);
@@ -4328,6 +5527,28 @@ function renderSocialCommentEditForm(entry) {
   `;
 }
 
+function renderWallPostEditForm(entry) {
+  const context = buildWallPostActionContext(entry);
+  const contextAttrs = renderWallPostActionAttributes(context);
+  const buttonClass = getSocialActionButtonClass();
+  const deleteButtonClass = getSocialActionButtonClass("delete");
+
+  return `
+    <form data-action="save-wall-post-edit" ${contextAttrs} class="mt-3 space-y-2">
+      <textarea
+        name="wallPostBody"
+        rows="3"
+        maxlength="${MAX_SOCIAL_BODY_LENGTH}"
+        class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
+      >${escapeHtml(entry.body || "")}</textarea>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button type="submit" class="${buttonClass}">Save</button>
+        <button type="button" data-action="cancel-wall-post-edit" class="${deleteButtonClass}">Cancel</button>
+      </div>
+    </form>
+  `;
+}
+
 function buildSocialCommentActionContext(entry) {
   const authorUid = getSocialCommentAuthorUid(entry);
 
@@ -4343,6 +5564,132 @@ function buildSocialCommentActionContext(entry) {
   };
 }
 
+function buildWallPostActionContext(entry) {
+  return {
+    activityId: String(entry?.id || ""),
+    actorUid: String(entry?.actorUid || ""),
+    targetUserUid: String(entry?.targetUserUid || ""),
+    attachmentStoragePath: String(entry?.attachmentStoragePath || ""),
+    hasAttachment: Boolean(entry?.attachmentURL || entry?.attachmentStoragePath),
+  };
+}
+
+function buildThreadActionContext(entry) {
+  return {
+    threadOwnerUid: getThreadOwnerUid(entry),
+    activityId: String(entry?.id || ""),
+  };
+}
+
+function buildSocialLikeActionContext(entry) {
+  if (entry?.type === "media-comment") {
+    return {
+      targetKind: "media-comment",
+      targetKey: buildMediaCommentLikeKey(entry.tripId, entry.folderId, entry.itemId, entry.id),
+      tripId: String(entry?.tripId || ""),
+      folderId: String(entry?.folderId || ""),
+      itemId: String(entry?.itemId || ""),
+      commentId: String(entry?.id || ""),
+      threadOwnerUid: String(entry?.authorUid || entry?.actorUid || ""),
+      activityId: String(entry?.id || ""),
+      replyId: "",
+    };
+  }
+
+  if (entry?.type === "wall-post") {
+    return {
+      targetKind: "wall-post",
+      targetKey: buildActivityLikeKey(entry.targetUserUid, entry.id),
+      tripId: "",
+      folderId: "",
+      itemId: "",
+      commentId: "",
+      threadOwnerUid: String(entry?.targetUserUid || ""),
+      activityId: String(entry?.id || ""),
+      replyId: "",
+    };
+  }
+
+  if (entry?.type === "thread-reply") {
+    return {
+      targetKind: "thread-reply",
+      targetKey: buildThreadReplyLikeKey(entry.threadOwnerUid, entry.activityId, entry.id),
+      tripId: "",
+      folderId: "",
+      itemId: "",
+      commentId: "",
+      threadOwnerUid: String(entry?.threadOwnerUid || ""),
+      activityId: String(entry?.activityId || ""),
+      replyId: String(entry?.id || ""),
+    };
+  }
+
+  return null;
+}
+
+function renderThreadOpenButton(entry) {
+  if (entry?.type !== "wall-post") {
+    return "";
+  }
+
+  const context = buildThreadActionContext(entry);
+
+  if (!context.threadOwnerUid || !context.activityId) {
+    return "";
+  }
+
+  return `
+    <div class="mt-3">
+      <button
+        type="button"
+        data-action="open-thread"
+        ${renderThreadActionAttributes(context)}
+        class="${getSocialActionButtonClass()}"
+      >
+        Thread
+      </button>
+    </div>
+  `;
+}
+
+function renderActivitySourceAttributes(entry) {
+  return [
+    ["data-action", "open-activity-source"],
+    ["data-trip-id", String(entry?.tripId || "")],
+    ["data-folder-id", String(entry?.folderId || "")],
+    ["data-item-id", String(entry?.itemId || "")],
+    ["data-thread-owner-uid", String(getThreadOwnerUid(entry) || "")],
+    ["data-activity-id", String(entry?.id || "")],
+  ]
+    .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
+    .join(" ");
+}
+
+function renderSocialLikeActionAttributes(context) {
+  return [
+    ["data-target-kind", context?.targetKind || ""],
+    ["data-target-key", context?.targetKey || ""],
+    ["data-trip-id", context?.tripId || ""],
+    ["data-folder-id", context?.folderId || ""],
+    ["data-item-id", context?.itemId || ""],
+    ["data-comment-id", context?.commentId || ""],
+    ["data-thread-owner-uid", context?.threadOwnerUid || ""],
+    ["data-activity-id", context?.activityId || ""],
+    ["data-reply-id", context?.replyId || ""],
+  ]
+    .map(([name, value]) => `${name}="${escapeHtml(String(value || ""))}"`)
+    .join(" ");
+}
+
+function renderActivityTargetAttributes(entry) {
+  return [
+    ["data-action", "open-activity-target"],
+    ["data-target-user-uid", String(entry?.targetUserUid || "")],
+  ]
+    .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
+    .join(" ");
+}
+
 function renderSocialCommentActionAttributes(context) {
   return [
     ["data-comment-id", context.commentId],
@@ -4353,6 +5700,27 @@ function renderSocialCommentActionAttributes(context) {
     ["data-activity-user-id", context.activityUserId],
     ["data-attachment-storage-path", context.attachmentStoragePath],
     ["data-has-attachment", context.hasAttachment ? "true" : "false"],
+  ]
+    .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
+    .join(" ");
+}
+
+function renderWallPostActionAttributes(context) {
+  return [
+    ["data-activity-id", context.activityId],
+    ["data-actor-uid", context.actorUid],
+    ["data-target-user-uid", context.targetUserUid],
+    ["data-attachment-storage-path", context.attachmentStoragePath],
+    ["data-has-attachment", context.hasAttachment ? "true" : "false"],
+  ]
+    .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
+    .join(" ");
+}
+
+function renderThreadActionAttributes(context) {
+  return [
+    ["data-thread-owner-uid", context.threadOwnerUid],
+    ["data-activity-id", context.activityId],
   ]
     .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
     .join(" ");
@@ -4375,12 +5743,164 @@ function readSocialCommentActionContext(element) {
   };
 }
 
+function readActivitySourceContext(element) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    tripId: String(element.getAttribute("data-trip-id") || ""),
+    folderId: String(element.getAttribute("data-folder-id") || ""),
+    itemId: String(element.getAttribute("data-item-id") || ""),
+  };
+}
+
+function readActivityTargetContext(element) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    targetUserUid: String(element.getAttribute("data-target-user-uid") || ""),
+  };
+}
+
+function readWallPostActionContext(element) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    activityId: String(element.getAttribute("data-activity-id") || ""),
+    actorUid: String(element.getAttribute("data-actor-uid") || ""),
+    targetUserUid: String(element.getAttribute("data-target-user-uid") || ""),
+    attachmentStoragePath: String(element.getAttribute("data-attachment-storage-path") || ""),
+    hasAttachment: element.getAttribute("data-has-attachment") === "true",
+  };
+}
+
+function readThreadActionContext(element) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    threadOwnerUid: String(element.getAttribute("data-thread-owner-uid") || ""),
+    activityId: String(element.getAttribute("data-activity-id") || ""),
+  };
+}
+
+function readSocialLikeActionContext(element) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    targetKind: String(element.getAttribute("data-target-kind") || ""),
+    targetKey: String(element.getAttribute("data-target-key") || ""),
+    tripId: String(element.getAttribute("data-trip-id") || ""),
+    folderId: String(element.getAttribute("data-folder-id") || ""),
+    itemId: String(element.getAttribute("data-item-id") || ""),
+    commentId: String(element.getAttribute("data-comment-id") || ""),
+    threadOwnerUid: String(element.getAttribute("data-thread-owner-uid") || ""),
+    activityId: String(element.getAttribute("data-activity-id") || ""),
+    replyId: String(element.getAttribute("data-reply-id") || ""),
+  };
+}
+
 function getSocialCommentAuthorUid(entry) {
   return String(entry?.authorUid || entry?.actorUid || "");
 }
 
 function getSocialCommentActivityUserId(entry) {
   return String(entry?.actorUid || entry?.authorUid || "");
+}
+
+function getThreadOwnerUid(entry) {
+  if (entry?.type === "wall-post") {
+    return String(entry?.targetUserUid || "");
+  }
+
+  if (entry?.type === "media-comment") {
+    return getSocialCommentActivityUserId(entry);
+  }
+
+  return "";
+}
+
+function getWallPostDocRefs(context) {
+  const seenRefs = new Set();
+
+  return [context?.targetUserUid, context?.actorUid]
+    .filter(Boolean)
+    .reduce((refs, userId) => {
+      const refKey = `${userId}:${context.activityId}`;
+
+      if (!context?.activityId || seenRefs.has(refKey)) {
+        return refs;
+      }
+
+      seenRefs.add(refKey);
+      refs.push(getActivityDocRef(userId, context.activityId));
+      return refs;
+    }, []);
+}
+
+function buildThreadKey(threadOwnerUid, activityId) {
+  return threadOwnerUid && activityId ? `${threadOwnerUid}:${activityId}` : "";
+}
+
+function getLikeCountForTargetKey(targetKey) {
+  return targetKey ? Number(likeActorsByTargetKey.get(targetKey)?.size || 0) : 0;
+}
+
+function isTargetLikedByCurrentUser(targetKey) {
+  return Boolean(
+    targetKey &&
+      currentUser?.uid &&
+      likeActorsByTargetKey.get(targetKey)?.has(currentUser.uid)
+  );
+}
+
+function getReplyCountForThreadKey(threadKey) {
+  return threadKey ? Number(replyCountsByThreadKey.get(threadKey) || 0) : 0;
+}
+
+function getReplyCountForEntry(entry) {
+  return getReplyCountForThreadKey(
+    buildThreadKey(getThreadOwnerUid(entry), String(entry?.id || ""))
+  );
+}
+
+function getMediaItemInteractionCounts(item, tripId, folderId) {
+  const itemKey = buildMediaItemKeyFromItem(item, tripId, folderId);
+
+  return {
+    itemKey,
+    likeCount: getLikeCountForTargetKey(itemKey),
+    commentCount: Number(mediaCommentCountsByItemKey.get(itemKey) || 0),
+    replyCount: Number(mediaReplyCountsByItemKey.get(itemKey) || 0),
+  };
+}
+
+function getVideoPreviewThreadContext(previewState = getCurrentVideoPreviewState()) {
+  const activityId = String(previewState?.threadCommentId || "");
+  const threadOwnerUid = String(previewState?.threadOwnerUid || "");
+
+  if (!activityId || !threadOwnerUid) {
+    return null;
+  }
+
+  return {
+    threadOwnerUid,
+    activityId,
+  };
+}
+
+function getCurrentThreadReplies() {
+  return currentThreadRepliesKey
+    ? threadRepliesByKey.get(currentThreadRepliesKey) || []
+    : [];
 }
 
 function canEditSocialCommentContext(context) {
@@ -4391,6 +5911,14 @@ function canEditSocialCommentContext(context) {
       context.itemId &&
       currentUser?.uid &&
       context.authorUid === currentUser.uid
+  );
+}
+
+function canEditWallPostContext(context) {
+  return Boolean(
+    context?.activityId &&
+      currentUser?.uid &&
+      context.actorUid === currentUser.uid
   );
 }
 
@@ -4405,17 +5933,198 @@ function canDeleteSocialCommentContext(context) {
   );
 }
 
+function canDeleteWallPostContext(context) {
+  return Boolean(
+    context?.activityId &&
+      currentUser?.uid &&
+      (
+        context.actorUid === currentUser.uid ||
+        context.targetUserUid === currentUser.uid ||
+        isAdminViewEnabled()
+      )
+  );
+}
+
 function isEditingSocialComment(entry) {
   return Boolean(entry?.id && currentSocialCommentEditId === entry.id);
+}
+
+function isEditingWallPost(entry) {
+  return Boolean(entry?.id && currentWallPostEditId === entry.id);
 }
 
 function resetSocialCommentEdit() {
   currentSocialCommentEditId = "";
 }
 
+function resetWallPostEdit() {
+  currentWallPostEditId = "";
+}
+
+function isCurrentThreadContext(context) {
+  return Boolean(
+    context?.threadOwnerUid &&
+      context?.activityId &&
+      currentThreadContext?.threadOwnerUid === context.threadOwnerUid &&
+      currentThreadContext?.activityId === context.activityId
+  );
+}
+
+function clearActiveThreadState() {
+  currentThreadSurface = "";
+  currentThreadContext = null;
+  currentThreadRootEntry = null;
+  currentThreadStatusMessage = "";
+  threadRepliesUnsubscribe?.();
+  threadRepliesUnsubscribe = null;
+  currentThreadRepliesKey = "";
+  threadForm?.reset();
+  videoPreviewThreadForm?.reset();
+  setThreadStatusMessage("");
+}
+
+function syncActiveVideoPreviewThread(
+  previewState = getCurrentVideoPreviewState(),
+  comments = null
+) {
+  const threadContext = getVideoPreviewThreadContext(previewState);
+
+  if (!threadContext) {
+    if (currentThreadSurface === "preview") {
+      clearActiveThreadState();
+    }
+    return;
+  }
+
+  const selectedComment = (comments || []).find((comment) => comment.id === threadContext.activityId) || null;
+  const isSameThread = currentThreadSurface === "preview" && isCurrentThreadContext(threadContext);
+
+  currentThreadSurface = "preview";
+  currentThreadContext = threadContext;
+
+  if (!isSameThread) {
+    currentThreadRootEntry = null;
+    setThreadStatusMessage("LOADING THREAD.");
+  }
+
+  if (selectedComment) {
+    currentThreadRootEntry = normalizeThreadRootEntry(selectedComment);
+  } else {
+    currentThreadRootEntry = null;
+  }
+
+  syncThreadRepliesSubscription(threadContext);
+}
+
+function renderVideoPreviewThreadPanel(previewState = getCurrentVideoPreviewState()) {
+  const threadContextValue = getVideoPreviewThreadContext(previewState);
+  const rootEntry = currentThreadSurface === "preview" && threadContextValue
+    ? currentThreadRootEntry
+    : null;
+  const replies = currentThreadSurface === "preview" ? getCurrentThreadReplies() : [];
+  const canReply = Boolean(rootEntry && db && currentUser?.uid && canUploadMedia());
+  const hasActiveThread = Boolean(threadContextValue && currentThreadSurface === "preview");
+
+  if (videoPreviewThreadShell) {
+    videoPreviewThreadShell.classList.toggle("hidden", !hasActiveThread);
+  }
+
+  if (!hasActiveThread) {
+    if (videoPreviewThreadTitle) {
+      videoPreviewThreadTitle.textContent = "Selected Thread";
+    }
+
+    if (videoPreviewThreadContext) {
+      videoPreviewThreadContext.textContent = "";
+    }
+
+    if (videoPreviewThreadList) {
+      videoPreviewThreadList.innerHTML = "";
+    }
+
+    if (videoPreviewThreadStatus) {
+      videoPreviewThreadStatus.textContent = "";
+    }
+
+    if (videoPreviewThreadForm) {
+      videoPreviewThreadForm.classList.add("hidden");
+      videoPreviewThreadForm.reset();
+    }
+
+    return;
+  }
+
+  if (videoPreviewThreadTitle) {
+    videoPreviewThreadTitle.textContent = rootEntry ? buildThreadTitle(rootEntry) : "Selected Thread";
+  }
+
+  if (videoPreviewThreadContext) {
+    videoPreviewThreadContext.textContent = rootEntry
+      ? buildPreviewThreadContextLabel(rootEntry)
+      : "OPENING SELECTED THREAD.";
+  }
+
+  if (videoPreviewThreadList) {
+    videoPreviewThreadList.innerHTML = rootEntry
+      ? replies.length > 0
+        ? replies.map(renderThreadReply).join("")
+        : renderEmptySocialState("NO REPLIES YET.")
+      : renderEmptySocialState(currentThreadStatusMessage || "LOADING THREAD.");
+  }
+
+  if (videoPreviewThreadForm) {
+    videoPreviewThreadForm.classList.toggle("hidden", !canReply);
+  }
+
+  if (videoPreviewThreadSubmit) {
+    videoPreviewThreadSubmit.disabled = false;
+  }
+
+  if (!rootEntry) {
+    return;
+  }
+
+  if (replies.length > 0) {
+    setThreadStatusMessage(buildCountLabel(replies.length, "REPLY"));
+    return;
+  }
+
+  setThreadStatusMessage(canReply ? "NO REPLIES YET." : "SIGN IN TO REPLY.");
+}
+
+function resetVideoPreviewThreadSelection() {
+  if (currentVideoPreviewContext) {
+    currentVideoPreviewContext.threadCommentId = "";
+    currentVideoPreviewContext.threadOwnerUid = "";
+  }
+
+  if (currentThreadSurface === "preview") {
+    clearActiveThreadState();
+  }
+
+  renderVideoPreviewComments(getCurrentVideoPreviewState());
+}
+
+function resetActiveThreadForContext(context) {
+  if (!isCurrentThreadContext(context)) {
+    return;
+  }
+
+  if (currentThreadSurface === "preview") {
+    resetVideoPreviewThreadSelection();
+    return;
+  }
+
+  resetThreadDialog();
+}
+
 function renderVisibleSocialSurfaces() {
   if (videoPreviewModalOpen) {
     renderVideoPreviewComments(getCurrentVideoPreviewState());
+  }
+
+  if (threadModalOpen) {
+    renderThreadDialog();
   }
 
   const profileView = getActiveProfileView();
@@ -4442,8 +6151,256 @@ function getMediaCommentDocRef(context) {
   );
 }
 
+function getMediaItemLikeDocRef(context, userUid) {
+  return doc(
+    db,
+    runtimeConfig.collections.trips,
+    context.tripId,
+    "folders",
+    context.folderId,
+    "items",
+    context.itemId,
+    "likes",
+    userUid
+  );
+}
+
 function getActivityDocRef(userId, activityId) {
   return doc(db, runtimeConfig.collections.users, userId, "activity", activityId);
+}
+
+function getSocialLikeDocRef(context, userUid) {
+  if (!db || !context?.targetKind || !userUid) {
+    return null;
+  }
+
+  if (context.targetKind === "media-comment") {
+    return doc(
+      db,
+      runtimeConfig.collections.trips,
+      context.tripId,
+      "folders",
+      context.folderId,
+      "items",
+      context.itemId,
+      "comments",
+      context.commentId,
+      "likes",
+      userUid
+    );
+  }
+
+  if (context.targetKind === "wall-post") {
+    return doc(
+      db,
+      runtimeConfig.collections.users,
+      context.threadOwnerUid,
+      "activity",
+      context.activityId,
+      "likes",
+      userUid
+    );
+  }
+
+  if (context.targetKind === "thread-reply") {
+    return doc(
+      db,
+      runtimeConfig.collections.users,
+      context.threadOwnerUid,
+      "activity",
+      context.activityId,
+      "replies",
+      context.replyId,
+      "likes",
+      userUid
+    );
+  }
+
+  return null;
+}
+
+async function toggleLikeAtRef(likeRef) {
+  const likeSnapshot = await getDoc(likeRef);
+
+  if (likeSnapshot.exists()) {
+    await deleteDoc(likeRef);
+    return false;
+  }
+
+  await setDoc(likeRef, {
+    createdAt: serverTimestamp(),
+  });
+
+  return true;
+}
+
+function applyLocalLikeState(targetKey, userUid, liked) {
+  if (!targetKey || !userUid) {
+    return;
+  }
+
+  const nextActors = new Set(likeActorsByTargetKey.get(targetKey) || []);
+
+  if (liked) {
+    nextActors.add(userUid);
+  } else {
+    nextActors.delete(userUid);
+  }
+
+  const nextLikeActorsByTargetKey = new Map(likeActorsByTargetKey);
+
+  if (nextActors.size > 0) {
+    nextLikeActorsByTargetKey.set(targetKey, nextActors);
+  } else {
+    nextLikeActorsByTargetKey.delete(targetKey);
+  }
+
+  likeActorsByTargetKey = nextLikeActorsByTargetKey;
+}
+
+function syncThreadRepliesSubscription(context = currentThreadContext) {
+  const nextKey = buildThreadKey(context?.threadOwnerUid, context?.activityId);
+
+  if (!nextKey || !db || !runtimeConfig?.collections?.users) {
+    threadRepliesUnsubscribe?.();
+    threadRepliesUnsubscribe = null;
+    currentThreadRepliesKey = "";
+    return;
+  }
+
+  if (currentThreadRepliesKey === nextKey) {
+    return;
+  }
+
+  threadRepliesUnsubscribe?.();
+  currentThreadRepliesKey = nextKey;
+
+  if (!threadRepliesByKey.has(nextKey)) {
+    threadRepliesByKey.set(nextKey, []);
+  }
+
+  const repliesQuery = query(
+    collection(
+      db,
+      runtimeConfig.collections.users,
+      context.threadOwnerUid,
+      "activity",
+      context.activityId,
+      "replies"
+    ),
+    orderBy("createdAtMs", "asc")
+  );
+
+  threadRepliesUnsubscribe = onSnapshot(
+    repliesQuery,
+    (snapshot) => {
+      threadRepliesByKey.set(
+        nextKey,
+        snapshot.docs.map((replyDoc) =>
+          normalizeThreadReply({
+            id: replyDoc.id,
+            threadOwnerUid: context.threadOwnerUid,
+            activityId: context.activityId,
+            ...replyDoc.data(),
+          })
+        )
+      );
+
+      if (currentThreadRepliesKey === nextKey) {
+        if (currentThreadSurface === "modal") {
+          renderThreadDialog();
+        }
+
+        if (currentThreadSurface === "preview") {
+          renderVideoPreviewComments(getCurrentVideoPreviewState());
+        }
+      }
+    },
+    (error) => {
+      setThreadStatusMessage(getFriendlyFirestoreMessage(error).toUpperCase());
+
+      if (currentThreadSurface === "modal") {
+        renderThreadDialog();
+      }
+
+      if (currentThreadSurface === "preview") {
+        renderVideoPreviewThreadPanel(getCurrentVideoPreviewState());
+      }
+    }
+  );
+}
+
+function renderThreadDialog() {
+  const rootEntry = currentThreadRootEntry;
+  const replies = getCurrentThreadReplies();
+  const canReply = Boolean(rootEntry && db && currentUser?.uid && canUploadMedia());
+
+  if (threadTitle) {
+    threadTitle.textContent = buildThreadTitle(rootEntry);
+  }
+
+  if (threadContext) {
+    threadContext.textContent = buildThreadContextLabel(rootEntry);
+  }
+
+  if (threadRootEntry) {
+    threadRootEntry.innerHTML = rootEntry
+      ? renderThreadRootEntry(rootEntry)
+      : renderEmptySocialState(currentThreadStatusMessage || "LOADING THREAD.");
+  }
+
+  if (threadList) {
+    threadList.innerHTML = rootEntry
+      ? replies.length > 0
+        ? replies.map(renderThreadReply).join("")
+        : renderEmptySocialState("NO REPLIES YET.")
+      : "";
+  }
+
+  if (threadForm) {
+    threadForm.classList.toggle("hidden", !canReply);
+  }
+
+  if (threadSubmit) {
+    threadSubmit.disabled = false;
+  }
+
+  if (!rootEntry) {
+    return;
+  }
+
+  if (replies.length > 0) {
+    setThreadStatusMessage(buildCountLabel(replies.length, "REPLY"));
+    return;
+  }
+
+  setThreadStatusMessage(canReply ? "NO REPLIES YET." : "SIGN IN TO REPLY.");
+}
+
+function resetThreadDialog() {
+  if (currentThreadSurface === "modal") {
+    clearActiveThreadState();
+  }
+
+  threadForm?.reset();
+
+  if (threadTitle) {
+    threadTitle.textContent = "Comment Thread";
+  }
+
+  if (threadContext) {
+    threadContext.textContent = "";
+  }
+
+  if (threadRootEntry) {
+    threadRootEntry.innerHTML = "";
+  }
+
+  if (threadList) {
+    threadList.innerHTML = "";
+  }
+
+  setThreadModalOpen(false);
 }
 
 function setSocialSurfaceStatus(message) {
@@ -4470,6 +6427,24 @@ function getSocialMenuItemButtonClass(tone = "default") {
   }
 
   return "block w-full border border-transparent px-2 py-1.5 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.56rem] uppercase tracking-[0.16em] text-stone-200 transition hover:border-white/18 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-45";
+}
+
+function getSocialLikeButtonClass(liked = false) {
+  return liked
+    ? "inline-flex border border-amber-200/35 bg-amber-100/[0.07] px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-amber-50 transition hover:border-amber-100/55 hover:bg-amber-100/[0.12] disabled:cursor-not-allowed disabled:opacity-45"
+    : getSocialActionButtonClass();
+}
+
+function renderSocialMetricBadge(count, singularLabel, tone = "default") {
+  const badgeToneClass = tone === "highlight"
+    ? "border-amber-200/28 bg-amber-100/[0.05] text-amber-50/92"
+    : "border-white/10 bg-black/24 text-stone-300/72";
+
+  return `
+    <span class="inline-flex border px-1.5 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] ${badgeToneClass}">
+      ${escapeHtml(buildCountLabel(count, singularLabel))}
+    </span>
+  `;
 }
 
 function buildActivityActorFields() {
@@ -4640,12 +6615,24 @@ function formatActivityTime(value) {
 function buildCountLabel(count, singularLabel) {
   const total = Number(count || 0);
   const label = total === 1 ? singularLabel : `${singularLabel}S`;
-  return `${String(total).padStart(4, "0")} ${label}`;
+  return `${total} ${label}`;
 }
 
 function setVideoPreviewCommentStatus(message) {
   if (videoPreviewCommentStatus) {
     videoPreviewCommentStatus.textContent = message || "";
+  }
+}
+
+function setThreadStatusMessage(message) {
+  currentThreadStatusMessage = message || "";
+
+  if (threadStatus) {
+    threadStatus.textContent = currentThreadStatusMessage;
+  }
+
+  if (videoPreviewThreadStatus) {
+    videoPreviewThreadStatus.textContent = currentThreadStatusMessage;
   }
 }
 
@@ -6704,6 +8691,18 @@ function renderItemMeta(item, tripId, folderId) {
           item.description
         )}</div>`
       : "";
+  const interactionCounts = item.kind === "file"
+    ? getMediaItemInteractionCounts(item, tripId, folderId)
+    : null;
+  const interactionMarkup = interactionCounts
+    ? `
+      <div class="mt-1.5 flex flex-wrap gap-1.5">
+        ${renderSocialMetricBadge(interactionCounts.likeCount, "LIKE")}
+        ${renderSocialMetricBadge(interactionCounts.commentCount, "COMMENT")}
+        ${renderSocialMetricBadge(interactionCounts.replyCount, "REPLY", interactionCounts.replyCount > 0 ? "highlight" : "default")}
+      </div>
+    `
+    : "";
   const actionButtons = [];
 
   if (adminContext && item.kind === "file") {
@@ -6774,7 +8773,7 @@ function renderItemMeta(item, tripId, folderId) {
       ? `<div class="mt-2 flex flex-wrap gap-1.5">${actionButtons.join("")}</div>`
       : "";
 
-  return `${summary}${descriptionMarkup}${actionsMarkup}`;
+  return `${summary}${descriptionMarkup}${interactionMarkup}${actionsMarkup}`;
 }
 
 function renderItemPreview(item, tripId, folderId, view = "archive", certified = false) {

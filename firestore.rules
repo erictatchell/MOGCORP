@@ -20,6 +20,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(userId);
     }
 
+    function activityDocPath(userId, activityId) {
+      return /databases/$(database)/documents/users/$(userId)/activity/$(activityId);
+    }
+
     function userDocExists() {
       return isSignedIn() && exists(userDocPath(request.auth.uid));
     }
@@ -242,6 +246,13 @@ service cloud.firestore {
         && request.resource.data.authorPhotoURL is string;
     }
 
+    function isValidLikeCreate(likeId) {
+      return isMember()
+        && likeId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['createdAt'])
+        && request.resource.data.createdAt is timestamp;
+    }
+
     function hasValidActivityMediaFields() {
       return request.resource.data.tripId is string
         && request.resource.data.folderId is string
@@ -307,6 +318,64 @@ service cloud.firestore {
         ]);
     }
 
+    function threadParentExists(userId, activityId) {
+      return exists(activityDocPath(userId, activityId));
+    }
+
+    function threadParentType(userId, activityId) {
+      return threadParentExists(userId, activityId)
+        ? get(activityDocPath(userId, activityId)).data.type
+        : null;
+    }
+
+    function isThreadParentActor(userId, activityId) {
+      return threadParentExists(userId, activityId)
+        && get(activityDocPath(userId, activityId)).data.actorUid == request.auth.uid;
+    }
+
+    function isValidThreadReplyCreate(userId, activityId) {
+      return isMember()
+        && request.resource.data.id is string
+        && request.resource.data.type == 'thread-reply'
+        && request.resource.data.parentType in ['wall-post', 'media-comment']
+        && hasValidSocialContent()
+        && hasValidActivityActorFields()
+        && request.resource.data.createdAtMs is number
+        && request.resource.data.createdAtMs > 0
+        && threadParentType(userId, activityId) in ['wall-post', 'media-comment']
+        && request.resource.data.parentType == threadParentType(userId, activityId);
+    }
+
+    function isValidThreadReplyUpdate() {
+      return isMember()
+        && resource.data.type == 'thread-reply'
+        && resource.data.actorUid == request.auth.uid
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.parentType == resource.data.parentType
+        && request.resource.data.actorUid == resource.data.actorUid
+        && isValidSocialCommentEdit();
+    }
+
+    function isWallPostActor() {
+      return isMember()
+        && resource.data.type == 'wall-post'
+        && resource.data.actorUid == request.auth.uid;
+    }
+
+    function isWallPostOwner() {
+      return isMember()
+        && resource.data.type == 'wall-post'
+        && resource.data.targetUserUid == request.auth.uid;
+    }
+
+    function isValidWallPostUpdate() {
+      return isWallPostActor()
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.actorUid == resource.data.actorUid
+        && request.resource.data.targetUserUid == resource.data.targetUserUid
+        && isValidSocialCommentEdit();
+    }
+
     function isValidActivityMediaCommentUpdate() {
       return isMember()
         && resource.data.type == 'media-comment'
@@ -344,10 +413,32 @@ service cloud.firestore {
       match /activity/{activityId} {
         allow read: if true;
         allow create: if isValidActivityCreate(userId);
-        allow update: if isValidActivityMediaCommentUpdate();
+        allow update: if isValidWallPostUpdate() || isValidActivityMediaCommentUpdate();
         allow delete: if isAdmin()
           || (isMember() && resource.data.actorUid == request.auth.uid)
-          || (isMember() && userId == request.auth.uid && resource.data.type == 'wall-post');
+          || isWallPostOwner();
+
+        match /replies/{replyId} {
+          allow read: if true;
+          allow create: if isValidThreadReplyCreate(userId, activityId);
+          allow update: if isValidThreadReplyUpdate();
+          allow delete: if isAdmin()
+            || (isMember() && resource.data.actorUid == request.auth.uid)
+            || (isMember() && userId == request.auth.uid)
+            || (isMember() && isThreadParentActor(userId, activityId));
+
+          match /likes/{likeId} {
+            allow read: if true;
+            allow create: if isValidLikeCreate(likeId);
+            allow delete: if isMember() && likeId == request.auth.uid;
+          }
+        }
+
+        match /likes/{likeId} {
+          allow read: if true;
+          allow create: if isValidLikeCreate(likeId);
+          allow delete: if isMember() && likeId == request.auth.uid;
+        }
       }
     }
 
@@ -371,12 +462,24 @@ service cloud.firestore {
           allow update: if isAdmin() || isValidMemberTextUpdate() || isValidMemberFileUpdate();
           allow delete: if isAdmin() || isItemOwner();
 
+          match /likes/{likeId} {
+            allow read: if true;
+            allow create: if isValidLikeCreate(likeId);
+            allow delete: if isMember() && likeId == request.auth.uid;
+          }
+
           match /comments/{commentId} {
             allow read: if request.auth == null || isMember();
             allow create: if isValidMediaCommentCreate(tripId, folderId, itemId);
             allow update: if isValidMediaCommentUpdate();
             allow delete: if isAdmin()
               || (isMember() && resource.data.authorUid == request.auth.uid);
+
+            match /likes/{likeId} {
+              allow read: if true;
+              allow create: if isValidLikeCreate(likeId);
+              allow delete: if isMember() && likeId == request.auth.uid;
+            }
           }
         }
       }
