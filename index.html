@@ -1269,7 +1269,20 @@
               <img id="video-preview-image" alt="" class="hidden max-h-[58vh] w-full bg-black object-contain">
             </div>
 
-<section class="mt-4 border border-white/10 bg-black/24 p-3 sm:p-4">
+
+            <div class=" ">
+              <p id="video-preview-up-next" class="min-h-[1rem] font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-400/72"></p>
+              <label id="video-preview-autoplay-control" class="flex items-center justify-between gap-3 border border-white/10 bg-black/22 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 sm:inline-flex sm:min-w-[18rem]">
+                <span>Autoplay</span>
+                <span id="video-preview-autoplay-timer" class="ml-auto text-[0.58rem] text-stone-400/72">OFF</span>
+                <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
+                  <input id="video-preview-autoplay-toggle" type="checkbox" class="peer sr-only">
+                  <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
+                </span>
+              </label>
+            </div>
+
+<section class=" border border-white/10 bg-black/24 p-3 sm:p-4">
               <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div id="video-preview-social-summary" class="flex min-h-[2.25rem] flex-wrap items-center gap-1.5"></div>
                 <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -1281,17 +1294,6 @@
               </div>
             </section>
 
-            <div class=" space-y-2">
-              <p id="video-preview-up-next" class="min-h-[1rem] font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-400/72"></p>
-              <label id="video-preview-autoplay-control" class="flex items-center justify-between gap-3 border border-white/10 bg-black/22 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 sm:inline-flex sm:min-w-[18rem]">
-                <span>Autoplay</span>
-                <span id="video-preview-autoplay-timer" class="ml-auto text-[0.58rem] text-stone-400/72">OFF</span>
-                <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
-                  <input id="video-preview-autoplay-toggle" type="checkbox" class="peer sr-only">
-                  <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
-                </span>
-              </label>
-            </div>
 
 
             <section class="mt-4 border border-white/10 bg-black/22 p-3 sm:p-4">
