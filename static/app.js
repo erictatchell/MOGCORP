@@ -5905,10 +5905,12 @@ function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()
   videoPreviewCommentToggleButton.classList.toggle("hidden", !context);
 
   videoPreviewCommentToggleButton.innerHTML = `
-    <span>${escapeHtml(commentCountLabel)}</span>
-    <span class="ml-2 border-l border-current/20 pl-2 text-stone-300/70">
-      ${escapeHtml(commentLabel)}
-    </span>
+<span class="text-stone-300/70">
+    ${escapeHtml(commentCountLabel)}
+  </span>
+  <span class="ml-2 border-l border-current/20 pl-2">
+    ${escapeHtml(commentLabel)}
+  </span>
   `;
 
   videoPreviewCommentToggleButton.className = [
@@ -5964,12 +5966,14 @@ if (videoPreviewSocialSummary) {
     ? buildCountLabel(counts.likeCount, "LIKE")
     : buildCountLabel(0, "LIKE");
 
-  videoPreviewLikeButton.innerHTML = `
-    <span>${escapeHtml(likeLabel)}</span>
-    <span class="ml-2 border-l border-current/20 pl-2 text-stone-300/70">
-      ${escapeHtml(likeCountLabel)}
-    </span>
-  `;
+videoPreviewLikeButton.innerHTML = `
+  <span class="text-stone-300/70">
+    ${escapeHtml(likeCountLabel)}
+  </span>
+  <span class="ml-2 border-l border-current/20 pl-2">
+    ${escapeHtml(likeLabel)}
+  </span>
+`;
 
   videoPreviewLikeButton.className = liked
     ? "shrink-0 inline-flex items-center justify-center border border-amber-200/35 bg-amber-100/[0.07] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-amber-50 transition hover:border-amber-100/55 hover:bg-amber-100/[0.12] disabled:cursor-not-allowed disabled:opacity-45"
