@@ -539,13 +539,13 @@
 
     <div class="relative">
       <div id="scroll-banner" class="pointer-events-none fixed inset-x-0 top-0 z-50 grid -translate-y-3 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-b border-white/10 bg-neutral-950/45 px-4 py-3 opacity-0 shadow-[0_18px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-all duration-300 sm:px-6">
-        <div id="scroll-banner-context" class="hidden min-w-0 justify-self-start font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.22em] text-stone-200/78 sm:block"></div>
+        <div id="scroll-banner-context" class="col-start-1 hidden min-w-0 justify-self-start font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.22em] text-stone-200/78 sm:block"></div>
 
-        <a href="/" class="justify-self-center font-['Teko',sans-serif] text-[2rem] uppercase leading-[0.8] tracking-[0.12em] text-stone-100 sm:text-[2.3rem]">
+        <a href="/" class="col-start-2 justify-self-center font-['Teko',sans-serif] text-[2rem] uppercase leading-[0.8] tracking-[0.12em] text-stone-100 sm:text-[2.3rem]">
           100GIGZ
         </a>
 
-        <div class="flex items-center justify-self-end gap-2 sm:gap-3">
+        <div class="col-start-3 flex items-center justify-self-end gap-2 sm:gap-3">
           <div id="scroll-banner-mobile-menu-slot" class="flex min-h-[2.75rem] items-center justify-end py-1 pr-1 xl:hidden sm:min-h-[3rem] sm:pr-0"></div>
 
           <div id="scroll-banner-desktop-actions" class="hidden items-center gap-2 xl:flex">
@@ -575,22 +575,32 @@
       <div id="mobile-menu-backdrop" class="fixed inset-0 z-30 hidden bg-black/60 xl:hidden"></div>
 
       <aside id="mobile-menu-panel" class="fixed inset-x-3 top-[4.5rem] z-40 hidden max-h-[calc(100vh-5.25rem)] overflow-auto border border-white/10 bg-neutral-950/96 p-3 shadow-[0_20px_80px_rgba(0,0,0,0.55)] backdrop-blur-md xl:hidden sm:inset-x-auto sm:right-6 sm:top-20 sm:w-[26rem] sm:max-h-[calc(100vh-6rem)] sm:p-4">
-        <div id="mobile-menu-content" class="space-y-3 sm:space-y-4">
-          <div id="mobile-access-panel-slot"></div>
+        <div id="mobile-menu-content" class="space-y-2">
+          <label id="mobile-admin-panels-control" class="hidden w-full items-center justify-between gap-3 border border-white/10 bg-white/[0.03] px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.64rem] uppercase tracking-[0.18em] text-stone-200/82">
+            <span id="mobile-admin-panels-toggle-text">Show Admin Panels</span>
+            <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
+              <input id="mobile-admin-panels-toggle" type="checkbox" class="peer sr-only">
+              <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
+            </span>
+          </label>
 
-          <details id="friends-mobile-panel" class="border border-white/10 bg-white/[0.03]">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100 sm:py-4">
-              <span id="friends-mobile-title">Members</span>
-              <span id="friends-mobile-count" class="text-stone-300/60">0000 MEMBERS</span>
-            </summary>
-            <div class="border-t border-white/10 px-4 py-3.5 sm:py-4">
-              <p id="friends-mobile-status" class="hidden font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/60">
-              </p>
-              <div id="friends-mobile-list" class="mt-4 space-y-2"></div>
-            </div>
-          </details>
+          <p id="mobile-menu-member-summary" class="hidden border border-white/10 bg-black/20 px-3 py-3 text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-300/70"></p>
 
-          <div id="mobile-admin-panel-slot"></div>
+          <button id="mobile-menu-profile-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+            Profile
+          </button>
+          <button id="mobile-menu-activity-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+            Activity Feed
+          </button>
+          <button id="mobile-menu-members-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+            Members
+          </button>
+          <button id="mobile-menu-sign-out-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+            Sign Out
+          </button>
+          <button id="mobile-menu-sign-in-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+            Sign In
+          </button>
         </div>
       </aside>
 
@@ -599,12 +609,12 @@
           <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.35em] text-stone-300/65 sm:text-[0.8rem]">
             100GIGZ / ARCHIVE
           </p>
-          <div class="mt-2 flex items-start justify-between gap-4 sm:mt-3">
-            <a id="logo" href="/" class="inline-block font-['Teko',sans-serif] text-[clamp(3.4rem,13vw,8.6rem)] font-medium uppercase leading-[0.72] tracking-[0.08em] text-stone-100 opacity-100 transition-[opacity,transform] duration-[1400ms] ease-out sm:tracking-[0.12em]">
+          <div class="mt-2 grid grid-cols-[minmax(0,1fr)_2.75rem] items-start gap-4 sm:mt-3 sm:grid-cols-[minmax(0,1fr)_3rem] xl:flex xl:justify-between">
+            <a id="logo" href="/" class="col-start-1 inline-block justify-self-start font-['Teko',sans-serif] text-[clamp(3.4rem,13vw,8.6rem)] font-medium uppercase leading-[0.72] tracking-[0.08em] text-stone-100 opacity-100 transition-[opacity,transform] duration-[1400ms] ease-out sm:tracking-[0.12em] xl:col-auto">
               100GIGZ 
             </a>
 
-            <div id="header-mobile-menu-slot" class="flex min-h-[2.75rem] shrink-0 items-start justify-end pb-1 pr-1 pt-1 xl:hidden sm:min-h-[3rem] sm:pr-0 sm:pt-1.5">
+            <div id="header-mobile-menu-slot" class="col-start-2 flex min-h-[2.75rem] shrink-0 items-start justify-end justify-self-end pb-1 pr-1 pt-1 xl:hidden sm:min-h-[3rem] sm:pr-0 sm:pt-1.5">
               <button id="mobile-menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu-panel" class="flex h-9 w-9 shrink-0 items-center justify-center border border-white/12 bg-black/30 text-stone-100 shadow-[0_12px_32px_rgba(0,0,0,0.24)] backdrop-blur-sm transition-[transform,border-color,background-color,box-shadow] duration-300 hover:border-white/30 hover:bg-white/[0.08] xl:hidden sm:h-10 sm:w-10">
                 <span id="mobile-menu-toggle-label" class="sr-only">Open Menu</span>
                 <span aria-hidden="true" class="flex flex-col gap-1.5">
@@ -746,7 +756,7 @@
       </div>
 
       <section id="archive-page" class="mt-6">
-        <section id="featured-clip-shell" class="mb-6 hidden border border-sky-200/22 bg-[linear-gradient(135deg,rgba(186,230,253,0.14),rgba(37,99,235,0.05)_38%,rgba(3,7,18,0.92))] p-4 shadow-[inset_0_0_0_1px_rgba(186,230,253,0.08),0_16px_48px_rgba(56,189,248,0.08)] sm:p-5">
+        <section id="featured-clip-shell" class="mb-6 hidden cursor-pointer border border-sky-200/22 bg-[linear-gradient(135deg,rgba(186,230,253,0.14),rgba(37,99,235,0.05)_38%,rgba(3,7,18,0.92))] p-4 shadow-[inset_0_0_0_1px_rgba(186,230,253,0.08),0_16px_48px_rgba(56,189,248,0.08)] transition hover:border-sky-100/45 hover:bg-white/[0.03] sm:p-5">
           <div class="flex flex-col gap-4 sm:flex-row sm:items-stretch">
             <button id="featured-clip-open-button" type="button" class="group relative flex aspect-[16/10] w-full shrink-0 overflow-hidden border border-sky-200/28 bg-black/50 transition hover:border-sky-100/55 hover:bg-white/[0.05] sm:w-[15rem]">
               <img id="featured-clip-image" src="" alt="" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]">
@@ -869,7 +879,7 @@
               </div>
 
               <form id="profile-activity-form" class="mt-4 hidden space-y-3">
-                <textarea id="profile-activity-body" name="activityBody" rows="3" maxlength="600" placeholder="WRITE ON THIS WALL..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+                <textarea id="profile-activity-body" name="activityBody" rows="3" maxlength="600" autocapitalize="off" spellcheck="true" placeholder="WRITE ON THIS WALL..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <input id="profile-activity-image" name="activityImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 border border-white/12 bg-black/40 px-3 py-2 text-[0.68rem] tracking-[0.08em] text-stone-100 outline-none transition file:mr-3 file:border-0 file:bg-white/8 file:px-2 file:py-1.5 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-stone-200 focus:border-white/35">
                   <button id="profile-activity-submit" type="submit" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
@@ -884,6 +894,24 @@
             <div id="profile-trip-list" class="min-w-0 space-y-5 overflow-hidden"></div>
           </div>
         </div>
+      </section>
+
+      <section id="members-page" class="mt-6 hidden border border-white/12 bg-[linear-gradient(to_bottom,rgba(38,38,38,0.18),rgba(8,8,8,0.32)_32%,rgba(8,8,8,0.18))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] sm:p-6">
+        <div class="border-b border-white/10 pb-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div class="min-w-0">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-100/78">
+                Members
+              </p>
+              <p id="members-page-status" class="mt-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-300/62"></p>
+            </div>
+            <div class="flex flex-col items-start gap-1 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] uppercase tracking-[0.2em] sm:items-end">
+              <p id="members-page-count" class="text-[0.72rem] text-stone-200/78">0 MEMBERS</p>
+              <p id="members-page-online" class="text-[0.64rem] text-emerald-300/86">0 ONLINE</p>
+            </div>
+          </div>
+        </div>
+        <div id="members-page-list" class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3"></div>
       </section>
 
       <section id="privacy-page" class="mt-6 hidden border border-white/12 bg-[linear-gradient(to_bottom,rgba(32,32,32,0.18),rgba(8,8,8,0.34)_34%,rgba(8,8,8,0.18))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] sm:p-6">
@@ -1219,24 +1247,38 @@
         </form>
       </div>
 
-      <div id="video-preview-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6">
+      <div id="video-preview-modal" class="fixed inset-0 z-50 hidden h-[100dvh] items-stretch justify-center overflow-y-auto overscroll-contain p-0 sm:items-center sm:p-6">
         <div id="video-preview-backdrop" class="absolute inset-0 bg-black/82 backdrop-blur-sm"></div>
 
-        <div id="video-preview-shell" class="relative flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden border border-white/12 bg-neutral-950 shadow-[0_24px_96px_rgba(0,0,0,0.62)]">
-          <div class="flex flex-col gap-3 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+        <div id="video-preview-shell" class="relative flex min-h-[100dvh] w-full max-w-5xl flex-col overflow-y-auto border border-white/12 bg-neutral-950 shadow-[0_24px_96px_rgba(0,0,0,0.62)] sm:min-h-0 sm:max-h-[calc(100vh-2rem)] sm:overflow-hidden">
+          <div class="flex flex-col gap-3 border-b border-white/10 px-5 pb-5 pt-20 sm:flex-row sm:items-start sm:justify-between sm:px-6 sm:pt-5">
             <div class="min-w-0">
               <p id="video-preview-title" class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.2em] text-stone-200/82"></p>
               <p id="video-preview-badge" class="mt-2 hidden font-['Teko',sans-serif] text-[1.15rem] uppercase leading-none tracking-[0.16em] text-amber-200/90"></p>
             </div>
-            <button id="video-preview-close-button" type="button" class="border border-white/12 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.04]">
-              Close Preview
+            <button id="video-preview-close-button" type="button" class="fixed right-4 top-4 z-[60] flex h-11 w-11 items-center justify-center border border-white/14 bg-neutral-950/88 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-2xl leading-none text-stone-100 shadow-[0_16px_42px_rgba(0,0,0,0.4)] backdrop-blur transition hover:border-white/34 hover:bg-white/[0.08] sm:static sm:h-auto sm:w-auto sm:px-3 sm:py-2 sm:text-[0.68rem] sm:uppercase sm:tracking-[0.2em] sm:text-stone-200 sm:shadow-none sm:backdrop-blur-0">
+              <span aria-hidden="true" class="sm:hidden">&lsaquo;</span>
+              <span class="hidden sm:inline">Close Preview</span>
             </button>
           </div>
 
-          <div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <div class="min-h-0 overflow-visible overscroll-contain px-4 pb-[calc(9rem+env(safe-area-inset-bottom))] pt-5 sm:overflow-y-auto sm:px-6 sm:py-6">
+            <p id="video-preview-filename" class="mb-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.54rem] uppercase tracking-[0.16em] text-stone-500/78"></p>
             <div id="video-preview-frame" class="border border-white/12 bg-black/70 p-1.5 sm:p-2">
               <video id="video-preview-player" class="max-h-[58vh] w-full bg-black" controls autoplay playsinline preload="metadata"></video>
               <img id="video-preview-image" alt="" class="hidden max-h-[58vh] w-full bg-black object-contain">
+            </div>
+
+            <div class="mt-3 space-y-2">
+              <p id="video-preview-up-next" class="min-h-[1rem] font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-400/72"></p>
+              <label id="video-preview-autoplay-control" class="flex items-center justify-between gap-3 border border-white/10 bg-black/22 px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 sm:inline-flex sm:min-w-[18rem]">
+                <span>Autoplay</span>
+                <span id="video-preview-autoplay-timer" class="ml-auto text-[0.58rem] text-stone-400/72">OFF</span>
+                <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
+                  <input id="video-preview-autoplay-toggle" type="checkbox" class="peer sr-only">
+                  <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
+                </span>
+              </label>
             </div>
 
             <section class="mt-4 border border-white/10 bg-black/22 p-3 sm:p-4">
@@ -1259,9 +1301,14 @@
             <section class="mt-4 border border-white/10 bg-black/24 p-3 sm:p-4">
               <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div id="video-preview-social-summary" class="flex min-h-[2.25rem] flex-wrap items-center gap-1.5"></div>
-                <button id="video-preview-like-button" type="button" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
-                  Like
-                </button>
+                <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                  <button id="video-preview-like-button" type="button" class="w-full shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">
+                    Like
+                  </button>
+                  <button id="video-preview-comment-toggle-button" type="button" class="w-full shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">
+                    Comment
+                  </button>
+                </div>
               </div>
             </section>
 
@@ -1287,7 +1334,7 @@
                 </div>
                 <div id="video-preview-thread-list" class="mt-3 max-h-72 space-y-3 overflow-y-auto pr-1"></div>
                 <form id="video-preview-thread-form" class="mt-4 hidden space-y-3 border-t border-white/10 pt-4">
-                  <textarea id="video-preview-thread-body" name="threadBody" rows="3" maxlength="600" placeholder="ADD A REPLY..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+                  <textarea id="video-preview-thread-body" name="threadBody" rows="3" maxlength="600" autocapitalize="off" spellcheck="true" placeholder="ADD A REPLY..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
                   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <input id="video-preview-thread-image" name="threadImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 border border-white/12 bg-black/40 px-3 py-2 text-[0.68rem] tracking-[0.08em] text-stone-100 outline-none transition file:mr-3 file:border-0 file:bg-white/8 file:px-2 file:py-1.5 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-stone-200 focus:border-white/35">
                     <button id="video-preview-thread-submit" type="submit" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
@@ -1297,7 +1344,7 @@
                 </form>
               </div>
               <form id="video-preview-comment-form" class="mt-4 hidden space-y-3 border-t border-white/10 pt-4">
-                <textarea id="video-preview-comment-body" name="commentBody" rows="3" maxlength="600" placeholder="ADD A COMMENT..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+                <textarea id="video-preview-comment-body" name="commentBody" rows="3" maxlength="600" autocapitalize="off" spellcheck="true" placeholder="ADD A COMMENT..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <input id="video-preview-comment-image" name="commentImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 border border-white/12 bg-black/40 px-3 py-2 text-[0.68rem] tracking-[0.08em] text-stone-100 outline-none transition file:mr-3 file:border-0 file:bg-white/8 file:px-2 file:py-1.5 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-stone-200 focus:border-white/35">
                   <button id="video-preview-comment-submit" type="submit" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
@@ -1308,18 +1355,6 @@
             </section>
           </div>
 
-          <div class="border-t border-white/10 px-4 py-3 sm:px-6">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p id="video-preview-up-next" class="min-h-[1rem] font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-400/72"></p>
-                <label id="video-preview-autoplay-control" class="flex items-center justify-between gap-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.18em] text-stone-200/82 sm:justify-end">
-                  <span>Autoplay</span>
-                  <span class="relative inline-flex h-5 w-10 items-center rounded-full border border-white/12 bg-white/[0.04] transition">
-                    <input id="video-preview-autoplay-toggle" type="checkbox" class="peer sr-only">
-                    <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
-                  </span>
-                </label>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1354,7 +1389,7 @@
               </div>
               <div id="thread-list" class="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1"></div>
               <form id="thread-form" class="mt-4 hidden space-y-3 border-t border-white/10 pt-4">
-                <textarea id="thread-body" name="threadBody" rows="3" maxlength="600" placeholder="ADD A REPLY..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
+                <textarea id="thread-body" name="threadBody" rows="3" maxlength="600" autocapitalize="off" spellcheck="true" placeholder="ADD A REPLY..." class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"></textarea>
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <input id="thread-image" name="threadImage" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="min-w-0 flex-1 border border-white/12 bg-black/40 px-3 py-2 text-[0.68rem] tracking-[0.08em] text-stone-100 outline-none transition file:mr-3 file:border-0 file:bg-white/8 file:px-2 file:py-1.5 file:font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] file:text-[0.58rem] file:uppercase file:tracking-[0.16em] file:text-stone-200 focus:border-white/35">
                   <button id="thread-submit" type="submit" class="shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">

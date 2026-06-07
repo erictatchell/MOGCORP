@@ -3,6 +3,7 @@ import {
   GoogleAuthProvider,
   getAuth,
   onAuthStateChanged,
+  signInWithRedirect,
   signInWithPopup,
   signOut as firebaseSignOut,
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -102,13 +103,20 @@ const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
 const mobileMenuToggleLabel = document.getElementById("mobile-menu-toggle-label");
 const mobileMenuPanel = document.getElementById("mobile-menu-panel");
 const mobileMenuBackdrop = document.getElementById("mobile-menu-backdrop");
+const mobileAdminPanelsControl = document.getElementById("mobile-admin-panels-control");
+const mobileAdminPanelsToggle = document.getElementById("mobile-admin-panels-toggle");
+const mobileAdminPanelsToggleText = document.getElementById("mobile-admin-panels-toggle-text");
+const mobileMenuMemberSummary = document.getElementById("mobile-menu-member-summary");
+const mobileMenuProfileButton = document.getElementById("mobile-menu-profile-button");
+const mobileMenuActivityButton = document.getElementById("mobile-menu-activity-button");
+const mobileMenuMembersButton = document.getElementById("mobile-menu-members-button");
+const mobileMenuSignOutButton = document.getElementById("mobile-menu-sign-out-button");
+const mobileMenuSignInButton = document.getElementById("mobile-menu-sign-in-button");
 const scrollBannerMobileMenuSlot = document.getElementById("scroll-banner-mobile-menu-slot");
 const headerMobileMenuSlot = document.getElementById("header-mobile-menu-slot");
 const bannerRouteToggleLink = document.getElementById("banner-route-toggle-link");
 const bannerGoogleButton = document.getElementById("banner-google-signin-button");
 const bannerSignOutButton = document.getElementById("banner-sign-out-button");
-const mobileAccessPanelSlot = document.getElementById("mobile-access-panel-slot");
-const mobileAdminPanelSlot = document.getElementById("mobile-admin-panel-slot");
 const desktopAccessPanelSlot = document.getElementById("desktop-access-panel-slot");
 const desktopControlPanelSlot = document.getElementById("desktop-control-panel-slot");
 const authPanel = document.getElementById("auth-panel");
@@ -133,6 +141,7 @@ const friendsMobileTitle = document.getElementById("friends-mobile-title");
 const desktopRouteToggleLink = document.getElementById("desktop-route-toggle-link");
 const archivePage = document.getElementById("archive-page");
 const profilePage = document.getElementById("profile-page");
+const membersPage = document.getElementById("members-page");
 const privacyPage = document.getElementById("privacy-page");
 const tosPage = document.getElementById("tos-page");
 const profilePageTitle = document.getElementById("profile-page-title");
@@ -161,6 +170,10 @@ const profileActivityImageInput = document.getElementById("profile-activity-imag
 const profileActivitySubmit = document.getElementById("profile-activity-submit");
 const profileActivityStatus = document.getElementById("profile-activity-status");
 const profileActivityList = document.getElementById("profile-activity-list");
+const membersPageStatus = document.getElementById("members-page-status");
+const membersPageCount = document.getElementById("members-page-count");
+const membersPageOnline = document.getElementById("members-page-online");
+const membersPageList = document.getElementById("members-page-list");
 
 const tripForm = document.getElementById("trip-form");
 const folderForm = document.getElementById("folder-form");
@@ -219,6 +232,7 @@ const videoPreviewBackdrop = document.getElementById("video-preview-backdrop");
 const videoPreviewCloseButton = document.getElementById("video-preview-close-button");
 const videoPreviewShell = document.getElementById("video-preview-shell");
 const videoPreviewTitle = document.getElementById("video-preview-title");
+const videoPreviewFilename = document.getElementById("video-preview-filename");
 const videoPreviewSequence = document.getElementById("video-preview-sequence");
 const videoPreviewBadge = document.getElementById("video-preview-badge");
 const videoPreviewFrame = document.getElementById("video-preview-frame");
@@ -229,6 +243,7 @@ const videoPreviewNextButton = document.getElementById("video-preview-next-butto
 const videoPreviewCertifyButton = document.getElementById("video-preview-certify-button");
 const videoPreviewUpNext = document.getElementById("video-preview-up-next");
 const videoPreviewAutoplayToggle = document.getElementById("video-preview-autoplay-toggle");
+const videoPreviewAutoplayTimerLabel = document.getElementById("video-preview-autoplay-timer");
 const videoPreviewCommentForm = document.getElementById("video-preview-comment-form");
 const videoPreviewCommentBodyInput = document.getElementById("video-preview-comment-body");
 const videoPreviewCommentImageInput = document.getElementById("video-preview-comment-image");
@@ -237,6 +252,7 @@ const videoPreviewCommentStatus = document.getElementById("video-preview-comment
 const videoPreviewCommentsList = document.getElementById("video-preview-comments-list");
 const videoPreviewSocialSummary = document.getElementById("video-preview-social-summary");
 const videoPreviewLikeButton = document.getElementById("video-preview-like-button");
+const videoPreviewCommentToggleButton = document.getElementById("video-preview-comment-toggle-button");
 const videoPreviewThreadShell = document.getElementById("video-preview-thread-shell");
 const videoPreviewThreadTitle = document.getElementById("video-preview-thread-title");
 const videoPreviewThreadContext = document.getElementById("video-preview-thread-context");
@@ -289,6 +305,7 @@ const ROLE_ADMIN = "admin";
 const ROUTE_ARCHIVE = "archive";
 const ROUTE_PROFILE_SELF = "profile-self";
 const ROUTE_PROFILE_PUBLIC = "profile-public";
+const ROUTE_MEMBERS = "members";
 const ROUTE_PRIVACY = "privacy";
 const ROUTE_TOS = "tos";
 const ROUTE_UNKNOWN = "unknown";
@@ -303,8 +320,12 @@ const MAX_PROFILE_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_TRIP_COVER_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_SOCIAL_BODY_LENGTH = 600;
 const AUTOPLAY_IMAGE_DURATION_MS = 4000;
+const AUTOPLAY_COUNTDOWN_INTERVAL_MS = 250;
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;
+const PRESENCE_HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const RECENT_MEDIA_VIEW_WINDOW_MS = 3 * 60 * 60 * 1000;
 const RECENT_MEDIA_VIEW_STORAGE_KEY = "100gigz-recent-media-views";
+const GOOGLE_REDIRECT_STORAGE_KEY = "100gigz-google-redirect-requested";
 const ITEM_SORT_MEDIA_DATE_DESC = "media-date-desc";
 const ITEM_SORT_MEDIA_DATE_ASC = "media-date-asc";
 const ITEM_SORT_RECENTLY_ADDED = "recently-added";
@@ -380,7 +401,14 @@ let featuredMessage = DEFAULT_FEATURED_MESSAGE;
 let featuredClip = null;
 let videoPreviewAutoplayEnabled = false;
 let videoPreviewAutoplayTimer = 0;
+let videoPreviewAutoplayCountdownTimer = 0;
+let videoPreviewAutoplayDeadlineMs = 0;
+let videoPreviewCommentComposerOpen = false;
 let recentMediaViews = loadRecentMediaViews();
+let presenceHeartbeatTimer = 0;
+let presenceHeartbeatInFlight = false;
+let googleRedirectInProgress = false;
+let authStateReady = false;
 let vaultState = {
   configured: false,
   unlocked: false,
@@ -442,6 +470,10 @@ function applyStaticStrings() {
     bannerAdminPanelsToggleText.textContent = STRINGS.auth.showAdminPanels;
   }
 
+  if (mobileAdminPanelsToggleText) {
+    mobileAdminPanelsToggleText.textContent = STRINGS.auth.showAdminPanels;
+  }
+
   if (bannerGoogleButton) {
     bannerGoogleButton.textContent = STRINGS.auth.signInButton;
   }
@@ -453,6 +485,26 @@ function applyStaticStrings() {
 
   if (mobileMenuToggleLabel) {
     mobileMenuToggleLabel.textContent = STRINGS.auth.openMenu;
+  }
+
+  if (mobileMenuProfileButton) {
+    mobileMenuProfileButton.textContent = STRINGS.auth.profile;
+  }
+
+  if (mobileMenuActivityButton) {
+    mobileMenuActivityButton.textContent = "Activity Feed";
+  }
+
+  if (mobileMenuMembersButton) {
+    mobileMenuMembersButton.textContent = STRINGS.members.panelTitle;
+  }
+
+  if (mobileMenuSignOutButton) {
+    mobileMenuSignOutButton.textContent = STRINGS.auth.signOutButton;
+  }
+
+  if (mobileMenuSignInButton) {
+    mobileMenuSignInButton.textContent = STRINGS.auth.signInButton;
   }
 
   if (friendsDesktopTitle) {
@@ -581,6 +633,7 @@ async function initializeVaultExperience() {
     }
     revealSiteShell();
     setAppLoadingOverlayVisible(false);
+    maybeRequestGoogleSignInForUnlockedVault();
     return;
   }
 
@@ -1035,6 +1088,7 @@ async function handleVaultSubmit(event) {
     revealSiteShell();
     hideVaultGate();
     renderAll();
+    maybeRequestGoogleSignInForUnlockedVault();
   } catch (error) {
     setVaultFormVisible(true);
     setVaultStatusMessage(
@@ -1181,17 +1235,21 @@ function initializeAuthListener() {
   }
 
   onAuthStateChanged(auth, async (user) => {
+    authStateReady = true;
     currentUser = user;
     currentUserProfile = null;
 
     if (user) {
+      window.sessionStorage?.removeItem(GOOGLE_REDIRECT_STORAGE_KEY);
       try {
         currentUserProfile = await syncUserRecord(user);
+        startPresenceHeartbeat();
         await syncDefaultTripsIfNeeded();
       } catch (error) {
         showWarning(getErrorMessage(error, STRINGS.errors.userSyncFailed));
       }
     } else {
+      stopPresenceHeartbeat();
       friendAccessIssue = false;
       resetTextPostEditor();
       resetContributeDialog();
@@ -1212,6 +1270,7 @@ function initializeAuthListener() {
 
     syncDefaultAdminMode();
     renderAll();
+    maybeRequestGoogleSignInForUnlockedVault();
   });
 }
 
@@ -1262,6 +1321,7 @@ function setupForms() {
   videoPreviewAutoplayToggle?.addEventListener("change", handleVideoPreviewAutoplayToggleChange);
   videoPreviewPlayer?.addEventListener("ended", handleVideoPreviewPlayerEnded);
   videoPreviewLikeButton?.addEventListener("click", handleMediaItemLikeButtonClick);
+  videoPreviewCommentToggleButton?.addEventListener("click", handleVideoPreviewCommentToggleClick);
   videoPreviewCommentForm?.addEventListener("submit", handleVideoPreviewCommentSubmit);
   videoPreviewCommentsList?.addEventListener("click", handleSocialCommentActionClick);
   videoPreviewCommentsList?.addEventListener("submit", handleSocialCommentEditSubmit);
@@ -1282,8 +1342,14 @@ function setupForms() {
   bannerSignOutButton?.addEventListener("click", handleSignOut);
   adminPanelsToggle?.addEventListener("change", handleAdminPanelsToggleChange);
   bannerAdminPanelsToggle?.addEventListener("change", handleAdminPanelsToggleChange);
+  mobileAdminPanelsToggle?.addEventListener("change", handleAdminPanelsToggleChange);
   mobileMenuToggle?.addEventListener("click", handleMobileMenuToggleClick);
   mobileMenuBackdrop?.addEventListener("click", () => setMobileMenuOpen(false));
+  mobileMenuProfileButton?.addEventListener("click", handleMobileMenuProfileClick);
+  mobileMenuActivityButton?.addEventListener("click", handleMobileMenuActivityClick);
+  mobileMenuMembersButton?.addEventListener("click", handleMobileMenuMembersClick);
+  mobileMenuSignOutButton?.addEventListener("click", handleMobileMenuSignOutClick);
+  mobileMenuSignInButton?.addEventListener("click", handleMobileMenuSignInClick);
   desktopRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
   bannerRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
   bannerGoogleButton?.addEventListener("click", handleGoogleSignIn);
@@ -1298,14 +1364,21 @@ function setupForms() {
   friendsDesktopList?.addEventListener("change", handleRoleSelectChange);
   friendsMobileList?.addEventListener("change", handleRoleSelectChange);
   friendsMobileInlineList?.addEventListener("change", handleRoleSelectChange);
+  membersPageList?.addEventListener("change", handleRoleSelectChange);
   friendsDesktopList?.addEventListener("click", handleProfileActionClick);
   friendsMobileList?.addEventListener("click", handleProfileActionClick);
   friendsMobileInlineList?.addEventListener("click", handleProfileActionClick);
+  membersPageList?.addEventListener("click", handleProfileActionClick);
   friendsDesktopList?.addEventListener("keydown", handleProfileCardKeydown);
   friendsMobileList?.addEventListener("keydown", handleProfileCardKeydown);
   friendsMobileInlineList?.addEventListener("keydown", handleProfileCardKeydown);
+  membersPageList?.addEventListener("keydown", handleProfileCardKeydown);
   featuredClipOpenButton?.addEventListener("click", handleFeaturedClipOpenClick);
+  featuredClipShell?.addEventListener("click", handleFeaturedClipShellClick);
   document.addEventListener("click", handleDocumentRouteLinkClick);
+  document.addEventListener("click", handleDocumentTripCollapseClick);
+  document.addEventListener("visibilitychange", handlePresenceVisibilityChange);
+  window.addEventListener("focus", handlePresenceFocus);
   window.addEventListener("scroll", syncScrollBannerVisibility, { passive: true });
   window.addEventListener("resize", syncResponsivePanels);
   window.addEventListener("keydown", handleWindowKeydown);
@@ -1320,6 +1393,104 @@ function handleAdminPanelsToggleChange(event) {
 
 function handleMobileMenuToggleClick() {
   setMobileMenuOpen(!mobileMenuOpen);
+}
+
+function navigateFromMobileMenu(route, options = {}) {
+  setMobileMenuOpen(false);
+  beginRouteLoadingOverlay();
+  window.requestAnimationFrame(() => {
+    navigateToRoute(route, options);
+  });
+}
+
+function handleMobileMenuProfileClick() {
+  if (!currentUser?.uid) {
+    requestGoogleSignIn("SIGN IN TO OPEN PROFILE.");
+    return;
+  }
+
+  navigateFromMobileMenu(getOwnProfileRoute());
+}
+
+function handleMobileMenuActivityClick() {
+  if (!currentUser?.uid) {
+    requestGoogleSignIn("SIGN IN TO OPEN ACTIVITY FEED.");
+    return;
+  }
+
+  navigateFromMobileMenu(getOwnProfileRoute());
+}
+
+function handleMobileMenuMembersClick() {
+  if (!currentUser?.uid) {
+    requestGoogleSignIn("SIGN IN TO OPEN MEMBERS.");
+    return;
+  }
+
+  navigateFromMobileMenu({ kind: ROUTE_MEMBERS });
+}
+
+async function handleMobileMenuSignOutClick() {
+  setMobileMenuOpen(false);
+  await handleSignOut();
+}
+
+function handleMobileMenuSignInClick() {
+  requestGoogleSignIn();
+}
+
+function handleVideoPreviewCommentToggleClick() {
+  if (!currentUser?.uid || !canUploadMedia()) {
+    requestGoogleSignIn("SIGN IN TO COMMENT.");
+    setVideoPreviewCommentStatus("SIGN IN TO COMMENT.");
+    return;
+  }
+
+  videoPreviewCommentComposerOpen = !videoPreviewCommentComposerOpen;
+  renderVideoPreviewComments(getCurrentVideoPreviewState());
+
+  if (videoPreviewCommentComposerOpen) {
+    window.requestAnimationFrame(() => {
+      videoPreviewCommentBodyInput?.focus();
+    });
+  }
+}
+
+function handleDocumentTripCollapseClick(event) {
+  if (
+    isMobileTripLayout() ||
+    videoPreviewModalOpen ||
+    textPreviewModalOpen ||
+    threadModalOpen ||
+    contributeModalOpen ||
+    moveItemModalOpen ||
+    editPostModalOpen
+  ) {
+    return;
+  }
+
+  if (!trips.some((trip) => expandedTrips.get(trip.id))) {
+    return;
+  }
+
+  if (event.target.closest("[data-trip-section='true']")) {
+    return;
+  }
+
+  trips.forEach((trip) => {
+    expandedTrips.set(trip.id, false);
+  });
+  renderTrips();
+}
+
+function handlePresenceVisibilityChange() {
+  if (document.visibilityState === "visible") {
+    void updatePresenceHeartbeat();
+  }
+}
+
+function handlePresenceFocus() {
+  void updatePresenceHeartbeat();
 }
 
 function handleWindowKeydown(event) {
@@ -1379,15 +1550,13 @@ function handleWindowKeydown(event) {
 
 function syncResponsivePanels() {
   const mobileViewport = window.innerWidth < 1280;
-  const authTargetSlot = mobileViewport ? mobileAccessPanelSlot : desktopAccessPanelSlot;
-  const targetSlot = mobileViewport ? mobileAdminPanelSlot : desktopControlPanelSlot;
 
-  if (authPanel && authTargetSlot && authPanel.parentElement !== authTargetSlot) {
-    authTargetSlot.appendChild(authPanel);
+  if (authPanel && desktopAccessPanelSlot && authPanel.parentElement !== desktopAccessPanelSlot) {
+    desktopAccessPanelSlot.appendChild(authPanel);
   }
 
-  if (adminPanel && targetSlot && adminPanel.parentElement !== targetSlot) {
-    targetSlot.appendChild(adminPanel);
+  if (adminPanel && desktopControlPanelSlot && adminPanel.parentElement !== desktopControlPanelSlot) {
+    desktopControlPanelSlot.appendChild(adminPanel);
   }
 
   if (!mobileViewport) {
@@ -1549,7 +1718,7 @@ function handleWindowPopstate() {
 function handleRouteToggleClick() {
   beginRouteLoadingOverlay();
   navigateToRoute(
-    isProfileRoute() || isLegalRoute() ? ROUTE_ARCHIVE : getOwnProfileRoute()
+    isProfileRoute() || isMembersRoute() || isLegalRoute() ? ROUTE_ARCHIVE : getOwnProfileRoute()
   );
 }
 
@@ -1565,6 +1734,10 @@ function normalizeRoute(pathname) {
 
   if (segment.toLowerCase() === "profile") {
     return { kind: ROUTE_PROFILE_SELF };
+  }
+
+  if (segment.toLowerCase() === ROUTE_MEMBERS) {
+    return { kind: ROUTE_MEMBERS };
   }
 
   if (segment.toLowerCase() === ROUTE_PRIVACY) {
@@ -1612,6 +1785,10 @@ function normalizeNextRoute(route) {
       : { kind: ROUTE_PROFILE_SELF };
   }
 
+  if (route === ROUTE_MEMBERS || route?.kind === ROUTE_MEMBERS) {
+    return { kind: ROUTE_MEMBERS };
+  }
+
   if (route === ROUTE_PRIVACY || route?.kind === ROUTE_PRIVACY) {
     return { kind: ROUTE_PRIVACY };
   }
@@ -1630,6 +1807,10 @@ function resolveRoutePath(route = currentRoute) {
 
   if (route?.kind === ROUTE_PROFILE_SELF) {
     return "/profile";
+  }
+
+  if (route?.kind === ROUTE_MEMBERS) {
+    return "/members";
   }
 
   if (route?.kind === ROUTE_PRIVACY) {
@@ -1659,6 +1840,10 @@ function isLegalRoute(route = currentRoute) {
   return route?.kind === ROUTE_PRIVACY || route?.kind === ROUTE_TOS;
 }
 
+function isMembersRoute(route = currentRoute) {
+  return route?.kind === ROUTE_MEMBERS;
+}
+
 function getOwnProfileRoute() {
   const routeId = normalizeRouteId(currentUserProfile?.routeId);
   return routeId
@@ -1681,6 +1866,26 @@ function setVideoPreviewModalOpen(nextOpen) {
   if (videoPreviewModal) {
     videoPreviewModal.classList.toggle("hidden", !videoPreviewModalOpen);
     videoPreviewModal.classList.toggle("flex", videoPreviewModalOpen);
+
+    if (videoPreviewModalOpen) {
+      videoPreviewModal.scrollTop = 0;
+      if (videoPreviewShell) {
+        videoPreviewShell.scrollTop = 0;
+      }
+    }
+  }
+
+  syncPreviewBodyScrollLock();
+}
+
+function syncPreviewBodyScrollLock() {
+  if (videoPreviewModalOpen) {
+    document.body.classList.add("overflow-hidden");
+    return;
+  }
+
+  if (siteShell?.getAttribute("aria-hidden") !== "true") {
+    document.body.classList.remove("overflow-hidden");
   }
 }
 
@@ -1808,19 +2013,36 @@ function renderUploadFileNameInputs() {
     return;
   }
 
+  const trip = trips.find((entry) => entry.id === currentContributionContext?.tripId) || null;
+  const folder = getFoldersForTrip(trip?.id).find(
+    (entry) => entry.id === currentContributionContext?.folderId
+  ) || null;
+  const existingMediaCount = trip && folder
+    ? getItemsForFolder(trip.id, folder.id).filter((item) => item.kind === "file").length
+    : 0;
+
   uploadFileNameList.innerHTML = files
-    .map((file, index) => `
+    .map((file, index) => {
+      const defaultName = buildDefaultUploadDisplayName(
+        file,
+        index,
+        trip,
+        existingMediaCount
+      );
+
+      return `
       <label class="block">
         <span class="mb-2 block font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.64rem] uppercase tracking-[0.18em] text-stone-400/72">File ${String(index + 1).padStart(2, "0")}</span>
         <input
           type="text"
           data-upload-file-name-index="${index}"
           maxlength="120"
-          value="${escapeHtml(file.name)}"
+          value="${escapeHtml(defaultName)}"
           class="w-full border border-white/12 bg-black/40 px-3 py-3 text-sm tracking-[0.08em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
         >
       </label>
-    `)
+    `;
+    })
     .join("");
 }
 
@@ -1966,12 +2188,21 @@ function syncAdminPanelsToggle() {
     bannerAdminPanelsControl.classList.toggle("flex", shouldShow);
   }
 
+  if (mobileAdminPanelsControl) {
+    mobileAdminPanelsControl.classList.toggle("hidden", !shouldShow);
+    mobileAdminPanelsControl.classList.toggle("flex", shouldShow);
+  }
+
   if (adminPanelsToggle) {
     adminPanelsToggle.checked = shouldShow && adminPanelsVisible;
   }
 
   if (bannerAdminPanelsToggle) {
     bannerAdminPanelsToggle.checked = shouldShow && adminPanelsVisible;
+  }
+
+  if (mobileAdminPanelsToggle) {
+    mobileAdminPanelsToggle.checked = shouldShow && adminPanelsVisible;
   }
 }
 
@@ -1980,6 +2211,9 @@ function syncDefaultAdminMode() {
     adminPanelsVisible = true;
     if (adminPanelsToggle) {
       adminPanelsToggle.checked = true;
+    }
+    if (mobileAdminPanelsToggle) {
+      mobileAdminPanelsToggle.checked = true;
     }
     return;
   }
@@ -2006,24 +2240,66 @@ function setAdminPanelsVisible(visible) {
   renderAll();
 }
 
-async function handleGoogleSignIn() {
+function createGoogleProvider() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  return provider;
+}
+
+async function requestGoogleSignIn(message = STRINGS.auth.signingIn, options = {}) {
   if (!auth) {
     showWarning("Firebase Auth is not ready. Check the Firebase values in .env.");
     return;
   }
 
   try {
-    authDetail.textContent = STRINGS.auth.signingIn;
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
+    if (authDetail && message) {
+      authDetail.textContent = message;
+    }
+
+    const provider = createGoogleProvider();
+
+    if (options?.redirect) {
+      googleRedirectInProgress = true;
+      window.sessionStorage?.setItem(GOOGLE_REDIRECT_STORAGE_KEY, "1");
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
     await signInWithPopup(auth, provider);
   } catch (error) {
-    authDetail.textContent = getFriendlyAuthMessage(error);
+    googleRedirectInProgress = false;
+    if (authDetail) {
+      authDetail.textContent = getFriendlyAuthMessage(error);
+    }
   }
+}
+
+async function handleGoogleSignIn() {
+  await requestGoogleSignIn();
+}
+
+function maybeRequestGoogleSignInForUnlockedVault() {
+  if (
+    !vaultState.unlocked ||
+    !authStateReady ||
+    !auth ||
+    currentUser?.uid ||
+    googleRedirectInProgress ||
+    window.sessionStorage?.getItem(GOOGLE_REDIRECT_STORAGE_KEY) === "1" ||
+    !runtimeConfig ||
+    !firestoreReady
+  ) {
+    return;
+  }
+
+  googleRedirectInProgress = true;
+  void requestGoogleSignIn("SIGN IN WITH GOOGLE TO ENTER 100GIGZ.", { redirect: true });
 }
 
 async function handleSignOut() {
   try {
+    window.sessionStorage?.setItem(GOOGLE_REDIRECT_STORAGE_KEY, "1");
     if (auth) {
       await firebaseSignOut(auth);
     }
@@ -2235,6 +2511,7 @@ async function handleVideoPreviewCommentSubmit(event) {
   const context = buildMediaCommentContext(previewState);
 
   if (!context || !db || !currentUser?.uid || !canUploadMedia()) {
+    requestGoogleSignIn("SIGN IN TO COMMENT.");
     setVideoPreviewCommentStatus("SIGN IN TO COMMENT.");
     return;
   }
@@ -2329,6 +2606,7 @@ async function handleProfileActivitySubmit(event) {
   const targetFriend = profileView?.state === "ready" ? profileView.friend : null;
 
   if (!targetFriend?.uid || !db || !currentUser?.uid || !canUploadMedia()) {
+    requestGoogleSignIn("SIGN IN TO POST.");
     setProfileActivityStatus("SIGN IN TO POST.");
     return;
   }
@@ -2399,6 +2677,7 @@ async function handleMediaItemLikeButtonClick() {
   const context = buildMediaItemLikeContext(getCurrentVideoPreviewState());
 
   if (!context?.likeKey || !db || !currentUser?.uid) {
+    requestGoogleSignIn("SIGN IN TO LIKE.");
     setVideoPreviewCommentStatus("SIGN IN TO LIKE.");
     return;
   }
@@ -2487,7 +2766,10 @@ function handleSocialCommentActionClick(event) {
 
   if (
     previewThreadTrigger &&
-    !event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+    (
+      previewThreadTrigger.tagName === "BUTTON" ||
+      !event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+    )
   ) {
     event.preventDefault();
     handleVideoPreviewThreadClick(previewThreadTrigger);
@@ -2520,6 +2802,7 @@ async function handleSocialLikeToggleClick(trigger) {
   const context = readSocialLikeActionContext(trigger);
 
   if (!context?.targetKey || !db || !currentUser?.uid) {
+    requestGoogleSignIn("SIGN IN TO LIKE.");
     setSocialSurfaceStatus("SIGN IN TO LIKE.");
     return;
   }
@@ -2876,6 +3159,7 @@ async function handleThreadReplySubmit(event) {
     !currentThreadRootEntry ||
     !canUploadMedia()
   ) {
+    requestGoogleSignIn("SIGN IN TO REPLY.");
     setThreadStatusMessage("SIGN IN TO REPLY.");
     return;
   }
@@ -3534,6 +3818,8 @@ async function syncUserRecord(user) {
     role,
     isAdmin: isElevatedRole(role),
     lastLoginAt: serverTimestamp(),
+    lastActiveAt: serverTimestamp(),
+    lastActiveAtMs: Date.now(),
     updatedAt: serverTimestamp(),
   };
 
@@ -3554,7 +3840,62 @@ async function syncUserRecord(user) {
     photoURL: String(existingData?.photoStoragePath ? existingData?.photoURL || "" : ""),
     photoStoragePath: String(existingData?.photoStoragePath || ""),
     role,
+    lastActiveAtMs: Date.now(),
   });
+}
+
+function startPresenceHeartbeat() {
+  stopPresenceHeartbeat();
+  void updatePresenceHeartbeat();
+  presenceHeartbeatTimer = window.setInterval(() => {
+    void updatePresenceHeartbeat();
+  }, PRESENCE_HEARTBEAT_INTERVAL_MS);
+}
+
+function stopPresenceHeartbeat() {
+  if (presenceHeartbeatTimer) {
+    window.clearInterval(presenceHeartbeatTimer);
+    presenceHeartbeatTimer = 0;
+  }
+  presenceHeartbeatInFlight = false;
+}
+
+async function updatePresenceHeartbeat() {
+  if (
+    presenceHeartbeatInFlight ||
+    !db ||
+    !runtimeConfig?.collections?.users ||
+    !currentUser?.uid ||
+    document.visibilityState === "hidden"
+  ) {
+    return;
+  }
+
+  presenceHeartbeatInFlight = true;
+
+  try {
+    const nowMs = Date.now();
+    await setDoc(
+      doc(db, runtimeConfig.collections.users, currentUser.uid),
+      {
+        lastActiveAt: serverTimestamp(),
+        lastActiveAtMs: nowMs,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    if (currentUserProfile) {
+      currentUserProfile = normalizeFriend({
+        ...currentUserProfile,
+        lastActiveAtMs: nowMs,
+      });
+    }
+  } catch (error) {
+    console.warn("Could not update online presence.", error);
+  } finally {
+    presenceHeartbeatInFlight = false;
+  }
 }
 
 async function handleProfileDetailsSubmit(event) {
@@ -3973,6 +4314,7 @@ async function handleUploadSubmit(event) {
   event.preventDefault();
 
   if (!canUploadMedia()) {
+    requestGoogleSignIn(STRINGS.uploads.signInRequired);
     showWarning(STRINGS.uploads.signInRequired);
     return;
   }
@@ -4464,6 +4806,7 @@ async function handleTextPostSubmit(event) {
   event.preventDefault();
 
   if (!canUploadMedia()) {
+    requestGoogleSignIn(STRINGS.uploads.textSignInRequired);
     showWarning(STRINGS.uploads.textSignInRequired);
     return;
   }
@@ -4888,6 +5231,10 @@ function openVideoPreview(tripId, folderId, itemId, view = "archive", options = 
     view,
     threadCommentId: String(options?.threadCommentId || ""),
     threadOwnerUid: String(options?.threadOwnerUid || ""),
+    preservePageContext: Boolean(options?.preservePageContext),
+    restoreScrollY: Number.isFinite(Number(options?.restoreScrollY))
+      ? Number(options.restoreScrollY)
+      : window.scrollY,
   };
   const previewState = getCurrentVideoPreviewState();
 
@@ -4896,13 +5243,18 @@ function openVideoPreview(tripId, folderId, itemId, view = "archive", options = 
     return;
   }
 
+  videoPreviewCommentComposerOpen = false;
   markPreviewItemViewed(previewState);
-  syncRouteSelectionToPreview(previewState);
+  if (!currentVideoPreviewContext.preservePageContext) {
+    syncRouteSelectionToPreview(previewState);
+  }
   syncVideoPreviewNavigation(previewState);
   syncVideoPreviewMedia(previewState);
   syncVideoPreviewComments(previewState);
   setVideoPreviewModalOpen(true);
-  schedulePreviewRowAlignment(previewState);
+  if (!currentVideoPreviewContext.preservePageContext) {
+    schedulePreviewRowAlignment(previewState);
+  }
 
   if (isVideoPreviewItem(previewState.currentItem)) {
     window.requestAnimationFrame(() => {
@@ -4935,14 +5287,20 @@ function navigateVideoPreview(direction, options = {}) {
     return;
   }
 
-  openVideoPreview(nextEntry.tripId, nextEntry.folderId, nextEntry.itemId, previewState.view);
+  openVideoPreview(nextEntry.tripId, nextEntry.folderId, nextEntry.itemId, previewState.view, {
+    preservePageContext: Boolean(currentVideoPreviewContext?.preservePageContext),
+    restoreScrollY: Number(currentVideoPreviewContext?.restoreScrollY || window.scrollY),
+  });
 }
 
 function resetVideoPreview() {
   const previewState = getCurrentVideoPreviewState();
+  const shouldPreservePageContext = Boolean(currentVideoPreviewContext?.preservePageContext);
+  const restoreScrollY = Number(currentVideoPreviewContext?.restoreScrollY || window.scrollY);
   clearVideoPreviewAutoplayTimer();
   setVideoPreviewAutoplayEnabled(false);
   resetVideoPreviewThreadSelection();
+  videoPreviewCommentComposerOpen = false;
   currentVideoPreviewContext = null;
   syncVideoPreviewNavigation(null);
   syncVideoPreviewMedia(null);
@@ -4950,8 +5308,12 @@ function resetVideoPreview() {
 
   setVideoPreviewModalOpen(false);
 
-  if (previewState) {
+  if (previewState && !shouldPreservePageContext) {
     schedulePreviewRowAlignment(previewState);
+  } else if (shouldPreservePageContext) {
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: restoreScrollY, left: 0, behavior: "auto" });
+    });
   }
 }
 
@@ -4981,6 +5343,8 @@ function getCurrentVideoPreviewState() {
     view,
     threadCommentId: String(currentVideoPreviewContext.threadCommentId || ""),
     threadOwnerUid: String(currentVideoPreviewContext.threadOwnerUid || ""),
+    preservePageContext: Boolean(currentVideoPreviewContext.preservePageContext),
+    restoreScrollY: Number(currentVideoPreviewContext.restoreScrollY || 0),
     items: sequence.map((entry) => entry.item),
     sequence,
     currentIndex,
@@ -5108,11 +5472,23 @@ function handleVideoPreviewPlayerEnded() {
 
 function clearVideoPreviewAutoplayTimer() {
   if (!videoPreviewAutoplayTimer) {
+    if (videoPreviewAutoplayCountdownTimer) {
+      window.clearInterval(videoPreviewAutoplayCountdownTimer);
+      videoPreviewAutoplayCountdownTimer = 0;
+    }
+    videoPreviewAutoplayDeadlineMs = 0;
+    syncVideoPreviewAutoplayTimerLabel();
     return;
   }
 
   window.clearTimeout(videoPreviewAutoplayTimer);
   videoPreviewAutoplayTimer = 0;
+  if (videoPreviewAutoplayCountdownTimer) {
+    window.clearInterval(videoPreviewAutoplayCountdownTimer);
+    videoPreviewAutoplayCountdownTimer = 0;
+  }
+  videoPreviewAutoplayDeadlineMs = 0;
+  syncVideoPreviewAutoplayTimerLabel();
 }
 
 function setVideoPreviewAutoplayEnabled(enabled) {
@@ -5129,6 +5505,7 @@ function scheduleVideoPreviewAutoplay(previewState = getCurrentVideoPreviewState
   clearVideoPreviewAutoplayTimer();
 
   if (!videoPreviewAutoplayEnabled || !previewState) {
+    syncVideoPreviewAutoplayTimerLabel(previewState);
     return;
   }
 
@@ -5141,14 +5518,61 @@ function scheduleVideoPreviewAutoplay(previewState = getCurrentVideoPreviewState
       videoPreviewAutoplayToggle.checked = false;
     }
 
+    syncVideoPreviewAutoplayTimerLabel(previewState);
     return;
   }
 
   if (isImagePreviewItem(previewState.currentItem)) {
+    videoPreviewAutoplayDeadlineMs = Date.now() + AUTOPLAY_IMAGE_DURATION_MS;
+    syncVideoPreviewAutoplayTimerLabel(previewState);
+    videoPreviewAutoplayCountdownTimer = window.setInterval(() => {
+      syncVideoPreviewAutoplayTimerLabel(previewState);
+    }, AUTOPLAY_COUNTDOWN_INTERVAL_MS);
     videoPreviewAutoplayTimer = window.setTimeout(() => {
       navigateVideoPreview(1);
     }, AUTOPLAY_IMAGE_DURATION_MS);
+    return;
   }
+
+  syncVideoPreviewAutoplayTimerLabel(previewState);
+}
+
+function syncVideoPreviewAutoplayTimerLabel(previewState = getCurrentVideoPreviewState()) {
+  if (!videoPreviewAutoplayTimerLabel) {
+    return;
+  }
+
+  const hasNextEntry = Boolean(
+    previewState && previewState.currentIndex < previewState.sequence.length - 1
+  );
+
+  if (!previewState) {
+    videoPreviewAutoplayTimerLabel.textContent = "OFF";
+    return;
+  }
+
+  if (!hasNextEntry) {
+    videoPreviewAutoplayTimerLabel.textContent = "END";
+    return;
+  }
+
+  if (!videoPreviewAutoplayEnabled) {
+    videoPreviewAutoplayTimerLabel.textContent = "OFF";
+    return;
+  }
+
+  if (isImagePreviewItem(previewState.currentItem) && videoPreviewAutoplayDeadlineMs) {
+    const remainingMs = Math.max(0, videoPreviewAutoplayDeadlineMs - Date.now());
+    videoPreviewAutoplayTimerLabel.textContent = formatAutoplayCountdown(remainingMs);
+    return;
+  }
+
+  videoPreviewAutoplayTimerLabel.textContent = "ON END";
+}
+
+function formatAutoplayCountdown(remainingMs) {
+  const seconds = Math.max(0, Math.ceil(Number(remainingMs || 0) / 1000));
+  return `00:${String(seconds).padStart(2, "0")}`;
 }
 
 function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()) {
@@ -5158,6 +5582,10 @@ function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()
 
   if (videoPreviewTitle) {
     videoPreviewTitle.textContent = previewState ? buildMediaPreviewTitle(previewState) : "";
+  }
+
+  if (videoPreviewFilename) {
+    videoPreviewFilename.textContent = previewState ? buildMediaPreviewFilenameLabel(previewState) : "";
   }
 
   if (videoPreviewSequence) {
@@ -5172,6 +5600,8 @@ function syncVideoPreviewNavigation(previewState = getCurrentVideoPreviewState()
     videoPreviewAutoplayToggle.checked = videoPreviewAutoplayEnabled;
     videoPreviewAutoplayToggle.disabled = !previewState || !hasNextEntry;
   }
+
+  syncVideoPreviewAutoplayTimerLabel(previewState);
 
   syncVideoPreviewCertification(previewState);
   renderVideoPreviewComments(previewState);
@@ -5227,7 +5657,12 @@ function buildMediaPreviewTitle(previewState) {
   const sourceLabel = buildItemSourceLabel(previewState.tripId, sourceFolderId);
   const sourceSuffix = sourceLabel ? ` // ${sourceLabel}` : "";
 
-  return `${previewType} // ${getItemDisplayName(item)}${sourceSuffix}`;
+  return `${previewType}${sourceSuffix}`;
+}
+
+function buildMediaPreviewFilenameLabel(previewState) {
+  const item = previewState?.currentItem || null;
+  return item ? getItemDisplayName(item) : "";
 }
 
 function buildMediaPreviewSequenceLabel(previewState) {
@@ -5235,7 +5670,25 @@ function buildMediaPreviewSequenceLabel(previewState) {
     return "";
   }
 
-  return `${previewState.currentIndex + 1}/${previewState.sequence.length}`;
+  const folderSequence = getFolderVideoItems(
+    previewState.tripId,
+    previewState.folderId,
+    previewState.view
+  );
+  const currentSourceFolderId = resolveItemSourceFolderId(
+    previewState.currentItem,
+    previewState.folderId
+  );
+  const folderIndex = folderSequence.findIndex((item) =>
+    item.id === previewState.itemId &&
+    resolveItemSourceFolderId(item, previewState.folderId) === currentSourceFolderId
+  );
+
+  if (folderIndex === -1) {
+    return `${previewState.currentIndex + 1}/${previewState.sequence.length}`;
+  }
+
+  return `${folderIndex + 1}/${folderSequence.length}`;
 }
 
 function buildVideoPreviewUpNextLabel(previewState) {
@@ -5246,13 +5699,15 @@ function buildVideoPreviewUpNextLabel(previewState) {
   const nextEntry = previewState.sequence[previewState.currentIndex + 1];
   const currentTrip = trips.find((trip) => trip.id === previewState.tripId) || null;
   const currentTripLabel = String(currentTrip?.slug || previewState.tripId || "").toUpperCase();
+  const currentFolderId = resolveItemSourceFolderId(previewState.currentItem, previewState.folderId);
 
   if (!nextEntry) {
-    return currentTripLabel ? `END OF ${currentTripLabel}.` : "";
+    return "";
   }
 
   const nextTrip = trips.find((trip) => trip.id === nextEntry.tripId) || null;
-  const nextFolder = getFoldersForTrip(nextEntry.tripId).find((folder) => folder.id === nextEntry.folderId) || null;
+  const nextFolderId = resolveItemSourceFolderId(nextEntry.item, nextEntry.folderId);
+  const nextFolder = getFoldersForTrip(nextEntry.tripId).find((folder) => folder.id === nextFolderId) || null;
   const nextPathLabel = buildFolderPathLabel(nextTrip, nextFolder)
     .replace(/\/$/, "")
     .toUpperCase();
@@ -5261,11 +5716,11 @@ function buildVideoPreviewUpNextLabel(previewState) {
     return `END OF ${currentTripLabel}. UP NEXT: ${nextPathLabel}`;
   }
 
-  if (nextEntry.folderId !== previewState.folderId) {
+  if (nextFolderId !== currentFolderId) {
     return `UP NEXT: ${nextPathLabel}`;
   }
 
-  return `UP NEXT: ${getItemDisplayName(nextEntry.item).toUpperCase()}`;
+  return "";
 }
 
 function isPreviewableMediaItem(item) {
@@ -5435,11 +5890,17 @@ function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()
   const canComment = Boolean(context && db && currentUser?.uid && canUploadMedia());
 
   if (videoPreviewCommentForm) {
-    videoPreviewCommentForm.classList.toggle("hidden", !canComment);
+    videoPreviewCommentForm.classList.toggle("hidden", !(canComment && videoPreviewCommentComposerOpen));
   }
 
   if (videoPreviewCommentSubmit) {
     videoPreviewCommentSubmit.disabled = false;
+  }
+
+  if (videoPreviewCommentToggleButton) {
+    videoPreviewCommentToggleButton.classList.toggle("hidden", !context);
+    videoPreviewCommentToggleButton.textContent = videoPreviewCommentComposerOpen ? "Close Comment" : "Comment";
+    videoPreviewCommentToggleButton.disabled = false;
   }
 
   if (videoPreviewCommentsList) {
@@ -5482,7 +5943,6 @@ function renderVideoPreviewInteractionBar(previewState = getCurrentVideoPreviewS
       ? [
           renderSocialMetricBadge(counts.likeCount, "LIKE"),
           renderSocialMetricBadge(counts.commentCount, "COMMENT"),
-          renderSocialMetricBadge(counts.replyCount, "REPLY", counts.replyCount > 0 ? "highlight" : "default"),
         ].join("")
       : "";
   }
@@ -5492,7 +5952,7 @@ function renderVideoPreviewInteractionBar(previewState = getCurrentVideoPreviewS
     videoPreviewLikeButton.className = liked
       ? "shrink-0 border border-amber-200/35 bg-amber-100/[0.07] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-amber-50 transition hover:border-amber-100/55 hover:bg-amber-100/[0.12] disabled:cursor-not-allowed disabled:opacity-45"
       : "shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45";
-    videoPreviewLikeButton.disabled = !counts?.itemKey || !currentUser?.uid;
+    videoPreviewLikeButton.disabled = !counts?.itemKey;
   }
 }
 
@@ -5507,18 +5967,28 @@ function renderMediaComment(comment, options = {}) {
   const bodyMarkup = isEditingSocialComment(comment)
     ? renderSocialCommentEditForm(comment)
     : `${renderSocialBody(comment.body)}${renderSocialAttachment(comment)}`;
-  const interactionMarkup = renderSocialInteractionBar(comment);
+  const interactionMarkup = renderSocialInteractionBar(comment, { includeReplyCount: false });
+  const replyButtonMarkup = context.threadOwnerUid && context.activityId
+    ? `
+      <div class="mt-3">
+        <button
+          type="button"
+          data-action="open-preview-thread"
+          ${renderThreadActionAttributes(context)}
+          class="${getSocialActionButtonClass()}"
+        >
+          Reply
+        </button>
+      </div>
+    `
+    : "";
   const editedMarkup = comment.editedAtMs
     ? `<span class="text-stone-400/42">EDITED</span>`
     : "";
-  const articleClass = "cursor-pointer border border-white/10 bg-black/24 p-3 transition hover:border-white/20 hover:bg-black/30";
-  const articleActionAttrs =
-    !isEditingSocialComment(comment) && context.threadOwnerUid && context.activityId
-      ? `data-action="open-preview-thread" ${renderThreadActionAttributes(context)} title="Show thread"`
-      : "";
+  const articleClass = "border border-white/10 bg-black/24 p-3";
 
   return `
-    <article class="${articleClass}" ${articleActionAttrs}>
+    <article class="${articleClass}">
       <div class="flex items-start gap-3">
         <img src="${escapeHtml(getSocialPhotoUrl(comment.authorPhotoURL))}" alt="${escapeHtml(comment.authorLabel)}" class="h-9 w-9 shrink-0 border border-white/10 bg-black object-cover object-center">
         <div class="min-w-0 flex-1">
@@ -5532,6 +6002,7 @@ function renderMediaComment(comment, options = {}) {
           </div>
           ${bodyMarkup}
           ${interactionMarkup}
+          ${replyButtonMarkup}
         </div>
       </div>
     </article>
@@ -5854,7 +6325,6 @@ function renderSocialLikeButton(entry) {
       data-action="toggle-social-like"
       ${renderSocialLikeActionAttributes(context)}
       class="${getSocialLikeButtonClass(liked)}"
-      ${currentUser?.uid ? "" : "disabled"}
     >
       ${liked ? "Liked" : "Like"}
     </button>
@@ -5981,14 +6451,15 @@ function renderWallPostControls(entry) {
   `;
 }
 
-function renderThreadRootEntry(entry) {
+function renderThreadRootEntry(entry, options = {}) {
   const actorMarkup = renderSocialActorLink(
     entry.actorLabel,
     entry.actorRouteId,
     "text-stone-100 transition hover:text-white hover:underline"
   );
-  const actionLabel = buildThreadRootActionLabel(entry);
-  const interactionMarkup = renderSocialInteractionBar(entry);
+  const showActionLabel = options.showActionLabel !== false;
+  const actionLabel = showActionLabel ? buildThreadRootActionLabel(entry) : "";
+  const interactionMarkup = renderSocialInteractionBar(entry, { includeReplyCount: false });
   const editedMarkup = entry.editedAtMs
     ? `<span class="text-stone-400/42">EDITED</span>`
     : "";
@@ -6003,7 +6474,7 @@ function renderThreadRootEntry(entry) {
             <span class="text-stone-400/58">${escapeHtml(formatActivityTime(entry.createdAtMs))}</span>
             ${editedMarkup}
           </div>
-          <p class="mt-1 break-words font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] text-stone-300/58">${escapeHtml(actionLabel)}</p>
+          ${actionLabel ? `<p class="mt-1 break-words font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.16em] text-stone-300/58">${escapeHtml(actionLabel)}</p>` : ""}
           ${renderSocialBody(entry.body)}
           ${renderSocialAttachment(entry)}
           ${interactionMarkup}
@@ -6118,7 +6589,9 @@ function renderSocialCommentEditForm(entry) {
         name="commentBody"
         rows="3"
         maxlength="${MAX_SOCIAL_BODY_LENGTH}"
-        class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
+        autocapitalize="off"
+        spellcheck="true"
+        class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
       >${escapeHtml(entry.body || "")}</textarea>
       <div class="flex flex-wrap items-center gap-1.5">
         <button type="submit" class="${buttonClass}">Save</button>
@@ -6140,7 +6613,9 @@ function renderWallPostEditForm(entry) {
         name="wallPostBody"
         rows="3"
         maxlength="${MAX_SOCIAL_BODY_LENGTH}"
-        class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
+        autocapitalize="off"
+        spellcheck="true"
+        class="w-full resize-y border border-white/12 bg-black/40 px-3 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.12em] text-stone-100 outline-none transition placeholder:text-stone-400/40 focus:border-white/35"
       >${escapeHtml(entry.body || "")}</textarea>
       <div class="flex flex-wrap items-center gap-1.5">
         <button type="submit" class="${buttonClass}">Save</button>
@@ -6671,7 +7146,7 @@ function renderVideoPreviewThreadPanel(previewState = getCurrentVideoPreviewStat
 
   if (videoPreviewThreadRoot) {
     videoPreviewThreadRoot.innerHTML = rootEntry
-      ? renderThreadRootEntry(rootEntry)
+      ? renderThreadRootEntry(rootEntry, { showActionLabel: false })
       : renderEmptySocialState(currentThreadStatusMessage || "LOADING THREAD.");
   }
 
@@ -6679,7 +7154,7 @@ function renderVideoPreviewThreadPanel(previewState = getCurrentVideoPreviewStat
     videoPreviewThreadList.innerHTML = rootEntry
       ? replies.length > 0
         ? replies.map(renderThreadReply).join("")
-        : renderEmptySocialState("NO REPLIES YET.")
+        : ""
       : renderEmptySocialState(currentThreadStatusMessage || "LOADING THREAD.");
   }
 
@@ -6700,7 +7175,7 @@ function renderVideoPreviewThreadPanel(previewState = getCurrentVideoPreviewStat
     return;
   }
 
-  setThreadStatusMessage(canReply ? "NO REPLIES YET." : "SIGN IN TO REPLY.");
+  setThreadStatusMessage(canReply ? "" : "SIGN IN TO REPLY.");
 }
 
 function resetVideoPreviewThreadSelection() {
@@ -6753,8 +7228,28 @@ function renderVisibleSocialSurfaces() {
 }
 
 function renderVisibleRouteContent() {
+  if (!canUploadMedia() && !isLegalRoute()) {
+    syncProfileActivitySubscription("");
+    if (tripList) {
+      tripList.innerHTML = "";
+    }
+    if (profileTripList) {
+      profileTripList.innerHTML = "";
+    }
+    if (membersPageList) {
+      membersPageList.innerHTML = "";
+    }
+    return;
+  }
+
   if (isProfileRoute()) {
     renderProfilePage();
+    return;
+  }
+
+  if (isMembersRoute()) {
+    syncProfileActivitySubscription("");
+    renderMembersPage();
     return;
   }
 
@@ -7002,7 +7497,7 @@ function renderThreadDialog() {
     threadList.innerHTML = rootEntry
       ? replies.length > 0
         ? replies.map(renderThreadReply).join("")
-        : renderEmptySocialState("NO REPLIES YET.")
+        : ""
       : "";
   }
 
@@ -7023,7 +7518,7 @@ function renderThreadDialog() {
     return;
   }
 
-  setThreadStatusMessage(canReply ? "NO REPLIES YET." : "SIGN IN TO REPLY.");
+  setThreadStatusMessage(canReply ? "" : "SIGN IN TO REPLY.");
 }
 
 function resetThreadDialog() {
@@ -8492,17 +8987,18 @@ function renderAuth() {
   const signedIn = Boolean(currentUser?.email);
   const hasArchiveAccess = canUploadMedia();
   syncAdminPanelsToggle();
+  syncMobileMenuToggleContent();
 
   if (desktopRouteToggleLink) {
     desktopRouteToggleLink.textContent =
-      isProfileRoute() || isLegalRoute()
+      isProfileRoute() || isMembersRoute() || isLegalRoute()
         ? STRINGS.auth.archive
         : STRINGS.auth.profile;
   }
 
   if (bannerRouteToggleLink) {
     bannerRouteToggleLink.textContent =
-      isProfileRoute() || isLegalRoute()
+      isProfileRoute() || isMembersRoute() || isLegalRoute()
         ? STRINGS.auth.archive
         : STRINGS.auth.profile;
   }
@@ -8557,13 +9053,15 @@ function renderAuth() {
 }
 
 function renderCurrentPage() {
-  const showArchive = currentRoute?.kind === ROUTE_ARCHIVE;
-  const showProfile = isProfileRoute();
+  const showArchive = currentRoute?.kind === ROUTE_ARCHIVE && canUploadMedia();
+  const showProfile = isProfileRoute() && canUploadMedia();
+  const showMembers = isMembersRoute() && canUploadMedia();
   const showPrivacy = currentRoute?.kind === ROUTE_PRIVACY;
   const showTos = currentRoute?.kind === ROUTE_TOS;
 
   archivePage?.classList.toggle("hidden", !showArchive);
   profilePage?.classList.toggle("hidden", !showProfile);
+  membersPage?.classList.toggle("hidden", !showMembers);
   privacyPage?.classList.toggle("hidden", !showPrivacy);
   tosPage?.classList.toggle("hidden", !showTos);
 }
@@ -8623,7 +9121,7 @@ function syncControlPanelVisibility() {
   const signedIn = canUploadMedia();
   const adminMode = signedIn && isAdminViewEnabled();
 
-  adminPanel?.classList.toggle("hidden", !adminMode || isProfileRoute() || isLegalRoute());
+  adminPanel?.classList.toggle("hidden", !adminMode || isProfileRoute() || isMembersRoute() || isLegalRoute());
   featuredMessageForm?.classList.toggle("hidden", !adminMode);
   tripForm?.classList.toggle("hidden", !adminMode);
   folderForm?.classList.toggle("hidden", !adminMode);
@@ -8634,6 +9132,43 @@ function syncControlPanelVisibility() {
 
 function renderProfilePage() {
   renderResolvedProfilePage(getActiveProfileView());
+}
+
+function renderMembersPage() {
+  const visibleMembers = getVisibleMembers();
+  const onlineMembers = getOnlineMembers(visibleMembers);
+  const authoredCounts = new Map(
+    visibleMembers.map((friend) => [friend.uid || friend.id, countAuthoredItemsForUser(friend)])
+  );
+  const statusText = !currentUser?.uid
+    ? "SIGN IN TO VIEW MEMBERS."
+    : friendAccessIssue
+      ? STRINGS.auth.rulesBlocked
+      : visibleMembers.length === 0
+        ? STRINGS.members.empty
+        : "ALL MEMBERS";
+
+  if (membersPageStatus) {
+    membersPageStatus.textContent = statusText;
+  }
+
+  if (membersPageCount) {
+    membersPageCount.textContent = formatPlainMemberCount(visibleMembers.length);
+  }
+
+  if (membersPageOnline) {
+    membersPageOnline.textContent = formatOnlineMemberCount(onlineMembers.length);
+  }
+
+  if (membersPageList) {
+    membersPageList.innerHTML = visibleMembers.length > 0
+      ? visibleMembers
+          .map((friend) =>
+            renderFriendCard(friend, authoredCounts.get(friend.uid || friend.id) || 0)
+          )
+          .join("")
+      : renderEmptySocialState(STRINGS.members.empty);
+  }
 }
 
 function renderTrips() {
@@ -8842,9 +9377,10 @@ function renderTrips() {
 function renderRouteChrome() {
   const profileView = getActiveProfileView();
   const isProfileMode = isProfileRoute();
+  const isMembersMode = isMembersRoute();
   const isLegalMode = isLegalRoute();
   const routeContextLabel = buildRouteContextLabel(profileView);
-  const pageKind = isProfileMode ? "profile" : isLegalMode ? "legal" : "archive";
+  const pageKind = isProfileMode ? "profile" : isMembersMode ? "members" : isLegalMode ? "legal" : "archive";
 
   if (siteShell) {
     siteShell.dataset.page = pageKind;
@@ -8872,6 +9408,10 @@ function buildRouteContextLabel(profileView) {
 
   if (currentRoute?.kind === ROUTE_TOS) {
     return "LEGAL // TERMS OF SERVICE";
+  }
+
+  if (isMembersRoute()) {
+    return "MEMBERS";
   }
 
   if (!isProfileRoute()) {
@@ -9127,7 +9667,11 @@ function renderActiveFolderPanel({
           </div>
           <details class="relative shrink-0">
             <summary class="flex h-9 w-9 cursor-pointer list-none items-center justify-center border border-white/12 bg-black/40 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] leading-none tracking-[0.08em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]" aria-label="Folder controls">
-              ...
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 5h18"></path>
+                <path d="M7 12h10"></path>
+                <path d="M10 19h4"></path>
+              </svg>
             </summary>
             <div class="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-60 border border-white/12 bg-neutral-950/98 p-3 shadow-[0_18px_54px_rgba(0,0,0,0.5)]">
               ${mobileControlsMarkup}
@@ -9290,9 +9834,9 @@ function renderTripCoverMarkup(trip, expanded) {
     : "opacity-20 grayscale sm:group-hover:opacity-35 sm:group-hover:grayscale-0 sm:group-focus-within:opacity-35 sm:group-focus-within:grayscale-0";
 
   return `
-    <div class="pointer-events-none absolute inset-y-0 left-0 z-0 w-1/2 overflow-hidden sm:w-[33%]">
+    <div class="pointer-events-none absolute inset-y-0 left-0 z-0 w-[66%] overflow-hidden sm:w-[33%]">
       <img src="${escapeHtml(trip.coverImageURL)}" alt="${escapeHtml(trip.label || trip.slug)}" class="h-full w-full object-cover object-left transition duration-300 ${imageToneClass}">
-      <div class="absolute inset-0 bg-[linear-gradient(to_right,rgba(8,8,8,0)_0%,rgba(8,8,8,0)_66%,rgba(8,8,8,0.45)_82%,rgba(8,8,8,0.96)_100%)]"></div>
+      <div class="absolute inset-0 bg-[linear-gradient(to_right,rgba(8,8,8,0)_0%,rgba(8,8,8,0.04)_45%,rgba(8,8,8,0.38)_74%,rgba(8,8,8,0.96)_100%)]"></div>
     </div>
   `;
 }
@@ -9313,11 +9857,11 @@ function renderTripSettingsMenu(trip) {
     `;
 
   return `
-    <details class="relative shrink-0" data-ignore-trip-toggle="true">
+    <details class="relative z-40 shrink-0" data-ignore-trip-toggle="true">
       <summary class="flex h-9 w-9 cursor-pointer list-none items-center justify-center border border-white/12 bg-black/40 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] leading-none tracking-[0.08em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] [&::-webkit-details-marker]:hidden" aria-label="Trip settings">
         ...
       </summary>
-      <div class="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-64 border border-white/12 bg-neutral-950/98 p-3 shadow-[0_18px_54px_rgba(0,0,0,0.5)]">
+      <div class="absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-64 border border-white/12 bg-neutral-950/98 p-3 shadow-[0_18px_54px_rgba(0,0,0,0.5)]">
         <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.18em] text-stone-300/70">
           Trip Card Image
         </p>
@@ -9442,7 +9986,7 @@ function renderTripSection(trip, index, { view = "archive", profileFriend = null
       });
 
   return `
-    <section class="${shellClass} min-w-0 overflow-hidden">
+    <section class="${shellClass} min-w-0 overflow-hidden" data-trip-section="true">
       <div class="${headerClass} group${headerInteractiveClass}"${headerToggleAttributes}>
         ${tripCoverMarkup}
         ${tripToggleIndicatorMarkup}
@@ -9708,16 +10252,21 @@ function renderItemRows(items, tripId, folderId, view = "archive", options = {})
     .map((item) => {
       const displayName = getItemDisplayName(item);
       const certifiedRow = isItemCertified(item);
+      const viewedRecently = isMediaItemViewedRecently(item, tripId, folderId);
+      const mutedTextClass = viewedRecently ? "text-stone-500/72" : "";
       const typeLabel =
         item.kind === "text"
           ? STRINGS.items.post
           : item.extension || simplifyMimeType(item.mimeType) || "FILE";
       const sourceFolderId = resolveItemSourceFolderId(item, folderId);
       const preview = renderItemPreview(item, tripId, folderId, view, certifiedRow);
-      const source = renderItemSource(tripId, sourceFolderId);
-      const author = renderItemAuthor(item);
-      const certified = renderItemCertified(item);
-      const meta = renderItemMeta(item, tripId, sourceFolderId, { mostRecentViewedKey });
+      const source = renderItemSource(tripId, sourceFolderId, { muted: viewedRecently });
+      const author = renderItemAuthor(item, { muted: viewedRecently });
+      const certified = renderItemCertified(item, { muted: viewedRecently });
+      const meta = renderItemMeta(item, tripId, sourceFolderId, {
+        mostRecentViewedKey,
+        muted: viewedRecently,
+      });
       const cellBorderClass = certifiedRow
         ? "border-b border-transparent"
         : "border-b border-white/8";
@@ -9737,18 +10286,18 @@ function renderItemRows(items, tripId, folderId, view = "archive", options = {})
           data-trip-id="${escapeHtml(tripId)}"
           data-folder-id="${escapeHtml(folderId)}"
           data-item-id="${escapeHtml(item.id)}"
-          class="transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.028)]" : ""}${previewRowSelected ? " bg-white/[0.04]" : ""}"
+          class="transition hover:bg-white/[0.03]${certifiedRow ? " bg-[rgba(255,221,138,0.028)]" : ""}${previewRowSelected ? " bg-white/[0.04]" : ""}${viewedRecently ? " text-stone-500/72" : ""}"
           ${certifiedRow ? ` style="${getCertifiedRowStyle()}"` : ""}
         >
           <td class="align-middle min-w-[4rem] ${cellBorderClass} px-2 py-2 sm:min-w-[4.5rem] sm:px-2.5 sm:py-2.5">${preview}</td>
-          ${showSourceColumn ? `<td class="align-middle min-w-[7rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-200/82 sm:min-w-[8rem] sm:px-2.5">${source}</td>` : ""}
+          ${showSourceColumn ? `<td class="align-middle min-w-[7rem] ${cellBorderClass} px-2 py-2 uppercase ${viewedRecently ? mutedTextClass : "text-stone-200/82"} sm:min-w-[8rem] sm:px-2.5">${source}</td>` : ""}
           <td class="align-middle min-w-[11rem] ${cellBorderClass} px-2 py-2 sm:min-w-[12rem] sm:px-2.5">${nameMarkup}</td>
-          <td class="align-middle min-w-[5rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[5.5rem] sm:px-2.5">${escapeHtml(
+          <td class="align-middle min-w-[5rem] ${cellBorderClass} px-2 py-2 uppercase ${viewedRecently ? mutedTextClass : "text-stone-300/72"} sm:min-w-[5.5rem] sm:px-2.5">${escapeHtml(
             typeLabel
           )}</td>
-          <td class="align-middle min-w-[7rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[7.5rem] sm:px-2.5">${author}</td>
-          <td class="align-middle min-w-[8rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[8.5rem] sm:px-2.5">${certified}</td>
-          <td class="align-middle min-w-[12rem] ${cellBorderClass} px-2 py-2 uppercase text-stone-300/72 sm:min-w-[14rem] sm:px-2.5">${meta}</td>
+          <td class="align-middle min-w-[7rem] ${cellBorderClass} px-2 py-2 uppercase ${viewedRecently ? mutedTextClass : "text-stone-300/72"} sm:min-w-[7.5rem] sm:px-2.5">${author}</td>
+          <td class="align-middle min-w-[8rem] ${cellBorderClass} px-2 py-2 uppercase ${viewedRecently ? mutedTextClass : "text-stone-300/72"} sm:min-w-[8.5rem] sm:px-2.5">${certified}</td>
+          <td class="align-middle min-w-[12rem] ${cellBorderClass} px-2 py-2 uppercase ${viewedRecently ? mutedTextClass : "text-stone-300/72"} sm:min-w-[14rem] sm:px-2.5">${meta}</td>
         </tr>
       `;
     })
@@ -9787,19 +10336,24 @@ function renderItemNameMarkup(item, displayName, tripId, folderId, view = "archi
   )}" target="_blank" rel="noreferrer">${escapeHtml(displayName)}</a>`;
 }
 
-function renderItemSource(tripId, folderId) {
+function renderItemSource(tripId, folderId, options = {}) {
   const label = buildItemSourceLabel(tripId, folderId);
+  const muted = Boolean(options?.muted);
 
   if (!label) {
     return `<span class="text-stone-300/40">${STRINGS.items.emptyName}</span>`;
   }
 
-  return `<span class="text-stone-100/86">${escapeHtml(label)}</span>`;
+  return `<span class="${muted ? "text-stone-500/72" : "text-stone-100/86"}">${escapeHtml(label)}</span>`;
 }
 
-function renderItemCertified(item) {
+function renderItemCertified(item, options = {}) {
   if (!isItemCertified(item)) {
     return "";
+  }
+
+  if (options?.muted) {
+    return `<span class="font-['Teko',sans-serif] text-[1.15rem] leading-none tracking-[0.18em] text-stone-500/72">${escapeHtml(HIGHLIGHT_FOLDER_LABEL)}</span>`;
   }
 
   return `<span class="font-['Teko',sans-serif] text-[1.15rem] leading-none tracking-[0.18em]" style="${getHighlightTextStyle()}">${escapeHtml(HIGHLIGHT_FOLDER_LABEL)}</span>`;
@@ -9816,9 +10370,10 @@ function renderItemMeta(item, tripId, folderId, options = {}) {
     item.kind === "text"
       ? STRINGS.items.textPost
       : `${formatBytes(item.size)} / ${escapeHtml(getItemDisplayName(item))}`;
+  const muted = Boolean(options?.muted);
   const descriptionMarkup =
     item.kind === "file" && item.description
-      ? `<div class="mt-1.5 normal-case text-[0.58rem] leading-4 tracking-[0.04em] text-stone-300/72">${escapeHtml(
+      ? `<div class="mt-1.5 normal-case text-[0.58rem] leading-4 tracking-[0.04em] ${muted ? "text-stone-500/72" : "text-stone-300/72"}">${escapeHtml(
           item.description
         )}</div>`
       : "";
@@ -9830,7 +10385,6 @@ function renderItemMeta(item, tripId, folderId, options = {}) {
       <div class="mt-1.5 flex flex-wrap gap-1.5">
         ${renderSocialMetricBadge(interactionCounts.likeCount, "LIKE")}
         ${renderSocialMetricBadge(interactionCounts.commentCount, "COMMENT")}
-        ${renderSocialMetricBadge(interactionCounts.replyCount, "REPLY", interactionCounts.replyCount > 0 ? "highlight" : "default")}
       </div>
     `
     : "";
@@ -9931,7 +10485,11 @@ function renderItemMeta(item, tripId, folderId, options = {}) {
       `
       : "";
 
-  return `${summary}${descriptionMarkup}${recentViewMarkup}${interactionMarkup}${actionsMarkup}`;
+  const summaryMarkup = muted
+    ? `<span class="text-stone-500/72">${summary}</span>`
+    : summary;
+
+  return `${summaryMarkup}${descriptionMarkup}${recentViewMarkup}${interactionMarkup}${actionsMarkup}`;
 }
 
 function renderItemPreview(item, tripId, folderId, view = "archive", certified = false) {
@@ -10030,19 +10588,20 @@ function renderItemPreview(item, tripId, folderId, view = "archive", certified =
   )}" target="_blank" rel="noreferrer">${STRINGS.uploads.genericFile}</a>`;
 }
 
-function renderItemAuthor(item) {
+function renderItemAuthor(item, options = {}) {
   const authorLabel = resolveItemAuthorLabel(item);
   const authorRouteId = getItemAuthorRouteId(item);
+  const muted = Boolean(options?.muted);
 
   if (!authorLabel) {
     return `<span class="text-stone-300/40">${STRINGS.items.emptyName}</span>`;
   }
 
   if (!authorRouteId || isItemBrandAuthored(item)) {
-    return `<span class="text-stone-200/82">${escapeHtml(authorLabel)}</span>`;
+    return `<span class="${muted ? "text-stone-500/72" : "text-stone-200/82"}">${escapeHtml(authorLabel)}</span>`;
   }
 
-  return `<a class="text-stone-100/82 underline-offset-4 hover:text-white hover:underline" href="${escapeHtml(
+  return `<a class="${muted ? "text-stone-500/72 hover:text-stone-400" : "text-stone-100/82 hover:text-white"} underline-offset-4 hover:underline" href="${escapeHtml(
     buildProfilePath(authorRouteId)
   )}">${escapeHtml(authorLabel)}</a>`;
 }
@@ -10130,10 +10689,13 @@ function syncUploadQueueVisibility() {
 function renderFriendsPanel() {
   const signedIn = Boolean(currentUser?.email);
   const visibleMembers = getVisibleMembers();
+  const onlineMembers = getOnlineMembers(visibleMembers);
   const authoredCounts = new Map(
     visibleMembers.map((friend) => [friend.uid || friend.id, countAuthoredItemsForUser(friend)])
   );
   const countLabel = padCount(visibleMembers.length, STRINGS.members.countLabel);
+  const mobileCountLabel = formatPlainMemberCount(visibleMembers.length);
+  const onlineLabel = formatOnlineMemberCount(onlineMembers.length);
   const statusText = !signedIn
     ? ""
     : friendAccessIssue
@@ -10147,11 +10709,11 @@ function renderFriendsPanel() {
   }
 
   if (friendsMobileCount) {
-    friendsMobileCount.textContent = countLabel;
+    friendsMobileCount.textContent = mobileCountLabel;
   }
 
   if (friendsMobileInlineCount) {
-    friendsMobileInlineCount.textContent = countLabel;
+    friendsMobileInlineCount.textContent = mobileCountLabel;
   }
 
   if (friendsDesktopStatus) {
@@ -10160,13 +10722,15 @@ function renderFriendsPanel() {
   }
 
   if (friendsMobileStatus) {
-    friendsMobileStatus.textContent = statusText;
-    friendsMobileStatus.classList.toggle("hidden", !statusText);
+    friendsMobileStatus.textContent = statusText || onlineLabel;
+    friendsMobileStatus.classList.toggle("hidden", !(statusText || onlineLabel));
+    friendsMobileStatus.classList.toggle("text-emerald-300/86", !statusText);
   }
 
   if (friendsMobileInlineStatus) {
-    friendsMobileInlineStatus.textContent = statusText;
-    friendsMobileInlineStatus.classList.toggle("hidden", !statusText);
+    friendsMobileInlineStatus.textContent = statusText || onlineLabel;
+    friendsMobileInlineStatus.classList.toggle("hidden", !(statusText || onlineLabel));
+    friendsMobileInlineStatus.classList.toggle("text-emerald-300/86", !statusText);
   }
 
   const markup = visibleMembers.length === 0
@@ -10180,22 +10744,73 @@ function renderFriendsPanel() {
             renderFriendCard(friend, authoredCounts.get(friend.uid || friend.id) || 0)
           )
           .join("");
+  const membersRouteLinkMarkup = signedIn
+    ? `
+      <a href="/members" class="block border border-white/10 bg-white/[0.03] px-3 py-3 text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.08]">
+        All Members
+      </a>
+    `
+    : "";
+  const panelMarkup = `${markup}${membersRouteLinkMarkup}`;
 
   if (friendsDesktopList) {
-    friendsDesktopList.innerHTML = markup;
+    friendsDesktopList.innerHTML = panelMarkup;
   }
 
   if (friendsMobileList) {
-    friendsMobileList.innerHTML = markup;
+    friendsMobileList.innerHTML = panelMarkup;
   }
 
   if (friendsMobileInlineList) {
-    friendsMobileInlineList.innerHTML = markup;
+    friendsMobileInlineList.innerHTML = panelMarkup;
   }
 
   if (friendsMobileInlineShell) {
-    friendsMobileInlineShell.classList.toggle("hidden", signedIn);
+    friendsMobileInlineShell.classList.add("hidden");
   }
+
+  renderMobileProfileMenu(visibleMembers, onlineMembers);
+}
+
+function renderMobileProfileMenu(visibleMembers = getVisibleMembers(), onlineMembers = getOnlineMembers(visibleMembers)) {
+  const signedIn = Boolean(currentUser?.uid);
+  const actionButtons = [
+    mobileMenuProfileButton,
+    mobileMenuActivityButton,
+    mobileMenuMembersButton,
+    mobileMenuSignOutButton,
+  ];
+
+  actionButtons.forEach((button) => {
+    setElementVisible(button, signedIn, "block");
+  });
+  setElementVisible(mobileMenuSignInButton, !signedIn, "block");
+
+  if (mobileMenuMemberSummary) {
+    mobileMenuMemberSummary.innerHTML = signedIn
+      ? `${escapeHtml(formatPlainMemberCount(visibleMembers.length))}<br><span class="text-emerald-300/86">${escapeHtml(formatOnlineMemberCount(onlineMembers.length))}</span>`
+      : "";
+    mobileMenuMemberSummary.classList.toggle("hidden", !signedIn);
+  }
+}
+
+function syncMobileMenuToggleContent() {
+  if (!mobileMenuToggle) {
+    return;
+  }
+
+  const profileImageUrl = currentUser?.uid
+    ? getFriendPhotoUrl(currentUserProfile || { photoURL: currentUser.photoURL || "" })
+    : DEFAULT_PROFILE_IMAGE_URL;
+  const label = currentUser?.uid ? "Open Profile Menu" : STRINGS.auth.openMenu;
+
+  mobileMenuToggle.setAttribute("aria-label", label);
+  mobileMenuToggle.setAttribute("title", label);
+  mobileMenuToggle.classList.add("overflow-hidden");
+  mobileMenuToggle.innerHTML = `
+    <span class="sr-only">${escapeHtml(label)}</span>
+    <img src="${escapeHtml(profileImageUrl)}" alt="" class="h-full w-full object-cover object-center">
+  `;
 }
 
 function syncTripSelect(selectElement, tripListState) {
@@ -10781,6 +11396,7 @@ function normalizeFriend(user) {
     photoStoragePath: String(user?.photoStoragePath || ""),
     role,
     isAdmin: isElevatedRole(role),
+    lastActiveAtMs: coerceTimestampToMs(user?.lastActiveAt, user?.lastActiveAtMs),
   };
 }
 
@@ -10855,6 +11471,10 @@ function renderFriendCard(friend, postCount = 0) {
   const canEditRole = isAdminViewEnabled();
   const canDeleteProfile = canEditRole && !isProtectedProfile(friend);
   const profileHref = friend.routeId ? buildProfilePath(friend.routeId) : "";
+  const online = isFriendOnline(friend);
+  const onlineDotMarkup = online
+    ? `<span class="h-2.5 w-2.5 shrink-0 border border-emerald-200/50 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.45)]" title="Online" aria-label="Online"></span>`
+    : "";
   const nameMarkup = profileHref
     ? `<a href="${escapeHtml(profileHref)}" class="min-w-0 break-words text-sm uppercase tracking-[0.14em] text-stone-100 transition hover:text-white [overflow-wrap:anywhere] xl:text-[0.78rem] xl:tracking-[0.12em] min-[1920px]:text-sm min-[1920px]:tracking-[0.14em]">${escapeHtml(label)}</a>`
     : `<p class="min-w-0 break-words text-sm uppercase tracking-[0.14em] text-stone-100 [overflow-wrap:anywhere] xl:text-[0.78rem] xl:tracking-[0.12em] min-[1920px]:text-sm min-[1920px]:tracking-[0.14em]">${escapeHtml(label)}</p>`;
@@ -10884,6 +11504,7 @@ function renderFriendCard(friend, postCount = 0) {
           <img src="${escapeHtml(getFriendPhotoUrl(friend))}" alt="${escapeHtml(label)}" class="h-12 w-12 shrink-0 border border-white/10 bg-black object-cover object-center xl:h-9 xl:w-9 min-[1920px]:h-12 min-[1920px]:w-12">
           <div class="min-w-0 flex-1 space-y-2 xl:space-y-1.5 min-[1920px]:space-y-2">
             <div class="flex min-w-0 flex-wrap items-center gap-2">
+              ${onlineDotMarkup}
               ${nameMarkup}
               ${inlineCurrentUserMarkup}
             </div>
@@ -11015,6 +11636,25 @@ function isElevatedRole(role) {
 
 function getVisibleMembers() {
   return friends;
+}
+
+function isFriendOnline(friend) {
+  const lastActiveAtMs = Number(friend?.lastActiveAtMs || 0);
+  return lastActiveAtMs > 0 && Date.now() - lastActiveAtMs <= ONLINE_WINDOW_MS;
+}
+
+function getOnlineMembers(members = getVisibleMembers()) {
+  return members.filter(isFriendOnline);
+}
+
+function formatPlainMemberCount(count) {
+  const total = Number(count || 0);
+  return `${total} ${total === 1 ? "MEMBER" : "MEMBERS"}`;
+}
+
+function formatOnlineMemberCount(count) {
+  const total = Number(count || 0);
+  return `${total} ONLINE`;
 }
 
 function isStorageObjectMissing(error) {
@@ -11194,6 +11834,18 @@ function normalizeMediaDisplayName(value, fallbackName = "") {
   return `${nextValue}.${extension}`;
 }
 
+function buildDefaultUploadDisplayName(file, index, trip = null, existingMediaCount = 0) {
+  const tripSlug = slugifyTrip(trip?.slug || trip?.id || "trip");
+  const mediaPrefix = isVideoFile(file) ? "V" : "P";
+  const extension =
+    getFileExtension(file?.name) ||
+    (isVideoFile(file) ? "mp4" : "jpg");
+  const sequenceIndex = Math.max(0, Number(existingMediaCount || 0) + Number(index || 0));
+  const baseName = `${tripSlug}-${mediaPrefix}${sequenceIndex}`;
+
+  return extension ? `${baseName}.${extension}` : baseName;
+}
+
 function buildStorageFileName(file, index, preferredName = "") {
   const sourceName = normalizeMediaDisplayName(preferredName, file.name) || file.name;
   const extension = getFileExtension(sourceName);
@@ -11328,7 +11980,7 @@ function renderFeaturedMessage() {
 
 function renderFeaturedClip() {
   const featuredEntry = resolveFeaturedClipEntry();
-  const shouldShow = Boolean(featuredEntry && currentRoute?.kind === ROUTE_ARCHIVE);
+  const shouldShow = Boolean(featuredEntry && currentRoute?.kind === ROUTE_ARCHIVE && canUploadMedia());
 
   if (featuredClipShell) {
     featuredClipShell.classList.toggle("hidden", !shouldShow);
@@ -11373,9 +12025,7 @@ function renderFeaturedClip() {
   }
 
   if (featuredClipDescription) {
-    featuredClipDescription.textContent = item.description
-      ? item.description
-      : "ADMIN PICK // OPEN THE FEATURED CLIP IN PREVIEW.";
+    featuredClipDescription.textContent = item.description || "";
   }
 }
 
@@ -11448,7 +12098,21 @@ function handleFeaturedClipOpenClick() {
     return;
   }
 
-  openVideoPreview(featuredEntry.trip.id, featuredEntry.folder.id, featuredEntry.item.id, "archive");
+  openVideoPreview(featuredEntry.trip.id, featuredEntry.folder.id, featuredEntry.item.id, "archive", {
+    preservePageContext: true,
+    restoreScrollY: window.scrollY,
+  });
+}
+
+function handleFeaturedClipShellClick(event) {
+  if (
+    event.target.closest("#featured-clip-open-button") ||
+    event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+  ) {
+    return;
+  }
+
+  handleFeaturedClipOpenClick();
 }
 
 function loadRecentMediaViews() {
