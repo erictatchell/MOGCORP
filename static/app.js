@@ -79,6 +79,8 @@ const logo = document.getElementById("logo");
 const tripList = document.getElementById("trip-list");
 const tripCount = document.getElementById("trip-count");
 const footerTickerTrack = document.getElementById("footer-ticker-track");
+const footerPrivacyLink = document.getElementById("footer-privacy-link");
+const footerTosLink = document.getElementById("footer-tos-link");
 const authStatus = document.getElementById("auth-status");
 const authDetail = document.getElementById("auth-detail");
 const authWarning = document.getElementById("auth-warning");
@@ -130,6 +132,8 @@ const friendsMobileTitle = document.getElementById("friends-mobile-title");
 const desktopRouteToggleLink = document.getElementById("desktop-route-toggle-link");
 const archivePage = document.getElementById("archive-page");
 const profilePage = document.getElementById("profile-page");
+const privacyPage = document.getElementById("privacy-page");
+const tosPage = document.getElementById("tos-page");
 const profilePageTitle = document.getElementById("profile-page-title");
 const profilePageSubtitle = document.getElementById("profile-page-subtitle");
 const profilePageHelper = document.getElementById("profile-page-helper");
@@ -273,6 +277,8 @@ const ROLE_ADMIN = "admin";
 const ROUTE_ARCHIVE = "archive";
 const ROUTE_PROFILE_SELF = "profile-self";
 const ROUTE_PROFILE_PUBLIC = "profile-public";
+const ROUTE_PRIVACY = "privacy";
+const ROUTE_TOS = "tos";
 const ROUTE_UNKNOWN = "unknown";
 const AUTHOR_ALIAS_BRAND = "brand";
 const AUTHOR_ALIAS_SELF = "self";
@@ -1269,6 +1275,9 @@ function setupForms() {
   friendsDesktopList?.addEventListener("click", handleProfileActionClick);
   friendsMobileList?.addEventListener("click", handleProfileActionClick);
   friendsMobileInlineList?.addEventListener("click", handleProfileActionClick);
+  friendsDesktopList?.addEventListener("keydown", handleProfileCardKeydown);
+  friendsMobileList?.addEventListener("keydown", handleProfileCardKeydown);
+  friendsMobileInlineList?.addEventListener("keydown", handleProfileCardKeydown);
   document.addEventListener("click", handleDocumentRouteLinkClick);
   window.addEventListener("scroll", syncScrollBannerVisibility, { passive: true });
   window.addEventListener("resize", syncResponsivePanels);
@@ -1512,7 +1521,9 @@ function handleWindowPopstate() {
 
 function handleRouteToggleClick() {
   beginRouteLoadingOverlay();
-  navigateToRoute(isProfileRoute() ? ROUTE_ARCHIVE : getOwnProfileRoute());
+  navigateToRoute(
+    isProfileRoute() || isLegalRoute() ? ROUTE_ARCHIVE : getOwnProfileRoute()
+  );
 }
 
 function normalizeRoute(pathname) {
@@ -1527,6 +1538,14 @@ function normalizeRoute(pathname) {
 
   if (segment.toLowerCase() === "profile") {
     return { kind: ROUTE_PROFILE_SELF };
+  }
+
+  if (segment.toLowerCase() === ROUTE_PRIVACY) {
+    return { kind: ROUTE_PRIVACY };
+  }
+
+  if (segment.toLowerCase() === ROUTE_TOS) {
+    return { kind: ROUTE_TOS };
   }
 
   if (isValidRouteId(segment.toUpperCase())) {
@@ -1566,6 +1585,14 @@ function normalizeNextRoute(route) {
       : { kind: ROUTE_PROFILE_SELF };
   }
 
+  if (route === ROUTE_PRIVACY || route?.kind === ROUTE_PRIVACY) {
+    return { kind: ROUTE_PRIVACY };
+  }
+
+  if (route === ROUTE_TOS || route?.kind === ROUTE_TOS) {
+    return { kind: ROUTE_TOS };
+  }
+
   return normalizeRoute(resolveRoutePath(route));
 }
 
@@ -1576,6 +1603,14 @@ function resolveRoutePath(route = currentRoute) {
 
   if (route?.kind === ROUTE_PROFILE_SELF) {
     return "/profile";
+  }
+
+  if (route?.kind === ROUTE_PRIVACY) {
+    return "/privacy";
+  }
+
+  if (route?.kind === ROUTE_TOS) {
+    return "/tos";
   }
 
   if (route?.kind === ROUTE_UNKNOWN && route.segment) {
@@ -1591,6 +1626,10 @@ function isProfileRoute(route = currentRoute) {
     route?.kind === ROUTE_PROFILE_PUBLIC ||
     route?.kind === ROUTE_UNKNOWN
   );
+}
+
+function isLegalRoute(route = currentRoute) {
+  return route?.kind === ROUTE_PRIVACY || route?.kind === ROUTE_TOS;
 }
 
 function getOwnProfileRoute() {
@@ -6274,6 +6313,11 @@ function renderVisibleRouteContent() {
     return;
   }
 
+  if (isLegalRoute()) {
+    syncProfileActivitySubscription("");
+    return;
+  }
+
   syncProfileActivitySubscription("");
   renderTrips();
 }
@@ -7669,11 +7713,65 @@ async function handleItemDeleteClick(trigger) {
 function handleProfileActionClick(event) {
   const trigger = event.target.closest("[data-action='delete-profile']");
 
-  if (!trigger) {
+  if (trigger) {
+    handleProfileDeleteClick(trigger);
     return;
   }
 
-  handleProfileDeleteClick(trigger);
+  const profileCard = event.target.closest("[data-profile-href]");
+
+  if (!profileCard) {
+    return;
+  }
+
+  if (
+    event.target.closest(
+      "a[href], button, input, textarea, select, label, summary, details, form"
+    )
+  ) {
+    return;
+  }
+
+  const profileHref = String(profileCard.getAttribute("data-profile-href") || "").trim();
+
+  if (!profileHref) {
+    return;
+  }
+
+  beginRouteLoadingOverlay();
+  window.requestAnimationFrame(() => {
+    navigateToRoute(normalizeRoute(profileHref));
+  });
+}
+
+function handleProfileCardKeydown(event) {
+  if (
+    event.defaultPrevented ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    (event.key !== "Enter" && event.key !== " ")
+  ) {
+    return;
+  }
+
+  const profileCard = event.target.closest("[data-profile-href]");
+
+  if (!profileCard || event.target !== profileCard) {
+    return;
+  }
+
+  const profileHref = String(profileCard.getAttribute("data-profile-href") || "").trim();
+
+  if (!profileHref) {
+    return;
+  }
+
+  event.preventDefault();
+  beginRouteLoadingOverlay();
+  window.requestAnimationFrame(() => {
+    navigateToRoute(normalizeRoute(profileHref));
+  });
 }
 
 async function handleProfileDeleteClick(trigger) {
@@ -7714,6 +7812,7 @@ function renderAll() {
   renderCurrentPage();
   renderTripCount();
   renderFooterTicker();
+  renderFooterRouteLinks();
   renderVisibleRouteContent();
   if (videoPreviewModalOpen) {
     syncVideoPreviewComments(getCurrentVideoPreviewState());
@@ -7736,12 +7835,16 @@ function renderAuth() {
 
   if (desktopRouteToggleLink) {
     desktopRouteToggleLink.textContent =
-      isProfileRoute() ? STRINGS.auth.archive : STRINGS.auth.profile;
+      isProfileRoute() || isLegalRoute()
+        ? STRINGS.auth.archive
+        : STRINGS.auth.profile;
   }
 
   if (bannerRouteToggleLink) {
     bannerRouteToggleLink.textContent =
-      isProfileRoute() ? STRINGS.auth.archive : STRINGS.auth.profile;
+      isProfileRoute() || isLegalRoute()
+        ? STRINGS.auth.archive
+        : STRINGS.auth.profile;
   }
 
   setElementVisible(desktopRouteToggleLink, hasArchiveAccess, "inline-flex");
@@ -7794,10 +7897,15 @@ function renderAuth() {
 }
 
 function renderCurrentPage() {
+  const showArchive = currentRoute?.kind === ROUTE_ARCHIVE;
   const showProfile = isProfileRoute();
+  const showPrivacy = currentRoute?.kind === ROUTE_PRIVACY;
+  const showTos = currentRoute?.kind === ROUTE_TOS;
 
-  archivePage?.classList.toggle("hidden", showProfile);
+  archivePage?.classList.toggle("hidden", !showArchive);
   profilePage?.classList.toggle("hidden", !showProfile);
+  privacyPage?.classList.toggle("hidden", !showPrivacy);
+  tosPage?.classList.toggle("hidden", !showTos);
 }
 
 function renderTripCount() {
@@ -7831,11 +7939,31 @@ function buildFooterTickerText() {
     .join(" - ")} -\u00A0`;
 }
 
+function renderFooterRouteLinks() {
+  [
+    [footerPrivacyLink, ROUTE_PRIVACY],
+    [footerTosLink, ROUTE_TOS],
+  ].forEach(([element, routeKind]) => {
+    if (!element) {
+      return;
+    }
+
+    const isActive = currentRoute?.kind === routeKind;
+    element.dataset.active = String(isActive);
+
+    if (isActive) {
+      element.setAttribute("aria-current", "page");
+    } else {
+      element.removeAttribute("aria-current");
+    }
+  });
+}
+
 function syncControlPanelVisibility() {
   const signedIn = canUploadMedia();
   const adminMode = signedIn && isAdminViewEnabled();
 
-  adminPanel?.classList.toggle("hidden", !adminMode || isProfileRoute());
+  adminPanel?.classList.toggle("hidden", !adminMode || isProfileRoute() || isLegalRoute());
   featuredMessageForm?.classList.toggle("hidden", !adminMode);
   tripForm?.classList.toggle("hidden", !adminMode);
   folderForm?.classList.toggle("hidden", !adminMode);
@@ -8054,28 +8182,38 @@ function renderTrips() {
 function renderRouteChrome() {
   const profileView = getActiveProfileView();
   const isProfileMode = isProfileRoute();
+  const isLegalMode = isLegalRoute();
   const routeContextLabel = buildRouteContextLabel(profileView);
+  const pageKind = isProfileMode ? "profile" : isLegalMode ? "legal" : "archive";
 
   if (siteShell) {
-    siteShell.dataset.page = isProfileMode ? "profile" : "archive";
+    siteShell.dataset.page = pageKind;
   }
 
   if (scrollBanner) {
-    scrollBanner.dataset.page = isProfileMode ? "profile" : "archive";
+    scrollBanner.dataset.page = pageKind;
   }
 
   if (headerRouteContext) {
     headerRouteContext.textContent = routeContextLabel;
-    headerRouteContext.classList.toggle("hidden", !isProfileMode);
+    headerRouteContext.classList.toggle("hidden", !routeContextLabel);
   }
 
   if (scrollBannerContext) {
     scrollBannerContext.textContent = routeContextLabel;
-    scrollBannerContext.classList.toggle("hidden", !isProfileMode);
+    scrollBannerContext.classList.toggle("hidden", !routeContextLabel);
   }
 }
 
 function buildRouteContextLabel(profileView) {
+  if (currentRoute?.kind === ROUTE_PRIVACY) {
+    return "LEGAL // PRIVACY POLICY";
+  }
+
+  if (currentRoute?.kind === ROUTE_TOS) {
+    return "LEGAL // TERMS OF SERVICE";
+  }
+
   if (!isProfileRoute()) {
     return "";
   }
@@ -9872,9 +10010,15 @@ function renderFriendCard(friend, postCount = 0) {
   const stackedMetaMarkup = `<div class="hidden xl:flex xl:flex-wrap xl:items-center xl:gap-1.5 min-[1920px]:hidden">${currentUserMarkup}${roleMarkup}</div>`;
   const sideRoleMarkup = `<div class="shrink-0 xl:hidden min-[1920px]:block">${roleMarkup}</div>`;
   const inlineCurrentUserMarkup = `<div class="xl:hidden min-[1920px]:block">${currentUserMarkup}</div>`;
+  const cardInteractivityClass = profileHref
+    ? "cursor-pointer transition-[border-color,background-color,transform] duration-200 hover:border-white/22 hover:bg-white/[0.03] focus:outline-none focus:ring-1 focus:ring-white/18"
+    : "";
+  const cardAttributes = profileHref
+    ? `data-profile-href="${escapeHtml(profileHref)}" role="link" tabindex="0" aria-label="Open ${escapeHtml(label)} profile"`
+    : "";
 
   return `
-    <article class="border border-white/10 bg-black/20 px-3 py-3 xl:px-2.5 xl:py-2.5 min-[1920px]:px-3 min-[1920px]:py-3">
+    <article ${cardAttributes} class="border border-white/10 bg-black/20 px-3 py-3 xl:px-2.5 xl:py-2.5 min-[1920px]:px-3 min-[1920px]:py-3 ${cardInteractivityClass}">
       <div class="flex items-start gap-3 xl:gap-2 min-[1920px]:gap-3">
         <img src="${escapeHtml(getFriendPhotoUrl(friend))}" alt="${escapeHtml(label)}" class="h-12 w-12 shrink-0 border border-white/10 bg-black object-cover object-center xl:h-9 xl:w-9 min-[1920px]:h-12 min-[1920px]:w-12">
         <div class="min-w-0 flex-1 space-y-2 xl:space-y-1.5 min-[1920px]:space-y-2">

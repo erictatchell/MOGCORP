@@ -250,6 +250,27 @@
       text-decoration-color: rgba(255, 255, 255, 0.7);
     }
 
+    .site-footer-route-link {
+      transition:
+        color 180ms ease,
+        border-color 180ms ease,
+        background-color 180ms ease,
+        opacity 180ms ease;
+    }
+
+    .site-footer-route-link:hover,
+    .site-footer-route-link:focus-visible {
+      color: rgba(245, 245, 244, 0.96);
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .site-footer-route-link[data-active="true"] {
+      color: rgba(245, 245, 244, 0.98);
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
     .highlight-folder-button {
       position: relative;
       transform: translate3d(0, 0, 0);
@@ -844,6 +865,192 @@
         </div>
       </section>
 
+      <section id="privacy-page" class="mt-6 hidden border border-white/12 bg-[linear-gradient(to_bottom,rgba(32,32,32,0.18),rgba(8,8,8,0.34)_34%,rgba(8,8,8,0.18))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] sm:p-6">
+        <div class="border-b border-white/10 pb-4">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="min-w-0">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-100/78">
+                Privacy Policy
+              </p>
+              <p class="mt-3 max-w-4xl break-words text-2xl uppercase tracking-[0.16em] text-stone-100 sm:text-3xl">
+                How 100GIGZ Collects, Uses, and Protects Account Data
+              </p>
+              <p class="mt-3 max-w-3xl font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.16em] text-stone-300/64 sm:text-[0.72rem]">
+                Available before sign-in and mirrored from the vault access panel for Google compliance review.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <a href="/tos" class="inline-flex border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+                Terms Of Service
+              </a>
+              <a href="mailto:erictatch@gmail.com?subject=100GIGZ%20privacy%20request" class="inline-flex border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+                Contact
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.95fr)]">
+          <div class="space-y-5">
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                1. Information We Receive
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                100GIGZ is a private archive experience. If you use Google sign-in, the site may receive the basic Google account details you authorize, including your email address, profile name, and profile photo.
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                The site also stores the content you choose to create or upload, such as archive posts, profile details, comments, and media files.
+              </p>
+            </section>
+
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                2. How We Use That Information
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                Information is used only to authenticate access, display member identity, manage archive permissions, and operate storage, moderation, and archive features inside the service.
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                100GIGZ does not sell personal information and does not use Google user data for advertising.
+              </p>
+            </section>
+
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                3. Sharing, Storage, and Visibility
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                Content shared inside the archive may be visible to other authorized users with access to the same areas. Account records and uploaded content are processed through Google Firebase services used to run the site.
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                The service uses layered access controls including the vault password, authenticated user access, and Firebase-backed data rules.
+              </p>
+            </section>
+
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                4. Google Data Use
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                Google sign-in is used only to verify identity and support account access inside 100GIGZ. The site does not request access to Gmail, Google Drive, Google Photos, or other broad Google data sets.
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                Google account information obtained through sign-in is not sold, not used for advertising, and not shared except as needed to operate the site infrastructure and authorized member experience.
+              </p>
+            </section>
+          </div>
+
+          <aside class="border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.24em] text-stone-300/64">
+              Requests And Contact
+            </p>
+            <p class="mt-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-400/68">
+              Last updated June 7, 2026
+            </p>
+            <p class="mt-4 text-sm leading-7 text-stone-200/82">
+              If you want to request access, correction, or deletion of your information, email <a href="mailto:erictatch@gmail.com?subject=100GIGZ%20privacy%20request" class="underline decoration-white/30 underline-offset-[0.24em]">erictatch@gmail.com</a>.
+            </p>
+            <p class="mt-4 text-sm leading-7 text-stone-200/82">
+              Questions about Google data use or compliance can be sent to <a href="mailto:erictatch@gmail.com?subject=100GIGZ%20Google%20compliance" class="underline decoration-white/30 underline-offset-[0.24em]">erictatch@gmail.com</a>.
+            </p>
+            <div class="mt-5 border-t border-white/10 pt-4">
+              <a href="/tos" class="inline-flex border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+                Read Terms Of Service
+              </a>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tos-page" class="mt-6 hidden border border-white/12 bg-[linear-gradient(to_bottom,rgba(32,32,32,0.18),rgba(8,8,8,0.34)_34%,rgba(8,8,8,0.18))] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] sm:p-6">
+        <div class="border-b border-white/10 pb-4">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="min-w-0">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.3em] text-stone-100/78">
+                Terms Of Service
+              </p>
+              <p class="mt-3 max-w-4xl break-words text-2xl uppercase tracking-[0.16em] text-stone-100 sm:text-3xl">
+                Basic Rules For Archive Access and Use
+              </p>
+              <p class="mt-3 max-w-3xl font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.16em] text-stone-300/64 sm:text-[0.72rem]">
+                Available before sign-in and mirrored from the vault access panel for Google compliance review.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <a href="/privacy" class="inline-flex border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+                Privacy Policy
+              </a>
+              <a href="mailto:erictatch@gmail.com?subject=100GIGZ%20account%20support" class="inline-flex border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+                Contact
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.95fr)]">
+          <div class="space-y-5">
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                1. Acceptance and Intended Use
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                By using 100GIGZ, you agree to use the site only for lawful access to the archive and only with credentials or invitations intended for you.
+              </p>
+            </section>
+
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                2. Your Content and Conduct
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                You are responsible for the content you upload or post. Only share media, names, and materials that you own or are allowed to distribute.
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                You may not attempt to bypass the vault, abuse member access, scrape the service, or interfere with the platform, storage, or moderation controls.
+              </p>
+            </section>
+
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                3. Account and Access Controls
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                Access may be suspended or removed at any time to protect the archive, other members, or the platform. 100GIGZ may restrict, remove, or moderate content when needed to maintain the service or comply with platform rules.
+              </p>
+            </section>
+
+            <section class="border border-white/10 bg-black/24 p-4 sm:p-5">
+              <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.22em] text-stone-300/64">
+                4. Availability and Changes
+              </p>
+              <p class="mt-3 text-sm leading-7 text-stone-200/84">
+                The service is provided on an as-available basis without guarantees of uninterrupted availability. Features, access rules, and policies may change as the archive evolves.
+              </p>
+            </section>
+          </div>
+
+          <aside class="border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+            <p class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.68rem] uppercase tracking-[0.24em] text-stone-300/64">
+              Policy Reference
+            </p>
+            <p class="mt-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-400/68">
+              Last updated June 7, 2026
+            </p>
+            <p class="mt-4 text-sm leading-7 text-stone-200/82">
+              Questions about these terms, support access, or content handling can be sent to <a href="mailto:erictatch@gmail.com?subject=100GIGZ%20account%20support" class="underline decoration-white/30 underline-offset-[0.24em]">erictatch@gmail.com</a>.
+            </p>
+            <div class="mt-5 border-t border-white/10 pt-4">
+              <a href="/privacy" class="inline-flex border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
+                Read Privacy Policy
+              </a>
+            </div>
+          </aside>
+        </div>
+      </section>
+
       <section id="friends-mobile-inline-shell" class="mt-6 xl:hidden">
         <details id="friends-mobile-inline-panel" class="border border-white/10 bg-white/[0.03]">
           <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-4 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100">
@@ -884,9 +1091,19 @@
             <span class="site-footer-ticker-segment" aria-hidden="true">100GIGZ - ARCHIVE - LOADING</span>
           </div>
         </div>
-        <p class="mt-3 px-4 text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-400/70 sm:mt-4">
-          &copy; 100GIGZ 2021
-        </p>
+        <div class="mt-3 flex flex-col items-center justify-center gap-3 px-4 sm:mt-4 sm:flex-row sm:gap-4">
+          <p class="text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.2em] text-stone-400/70">
+            &copy; 100GIGZ 2021
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <a id="footer-privacy-link" href="/privacy" class="site-footer-route-link inline-flex border border-white/10 bg-white/[0.02] px-3 py-1.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.2em] text-stone-300/72">
+              Privacy
+            </a>
+            <a id="footer-tos-link" href="/tos" class="site-footer-route-link inline-flex border border-white/10 bg-white/[0.02] px-3 py-1.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.2em] text-stone-300/72">
+              Terms
+            </a>
+          </div>
+        </div>
       </footer>
 
       <div id="edit-post-modal" class="fixed inset-0 z-50 hidden items-end justify-center overflow-y-auto p-2 sm:items-center sm:p-6">
