@@ -5897,11 +5897,27 @@ function renderVideoPreviewComments(previewState = getCurrentVideoPreviewState()
     videoPreviewCommentSubmit.disabled = false;
   }
 
-  if (videoPreviewCommentToggleButton) {
-    videoPreviewCommentToggleButton.classList.toggle("hidden", !context);
-    videoPreviewCommentToggleButton.textContent = videoPreviewCommentComposerOpen ? "Close Comment" : "Comment";
-    videoPreviewCommentToggleButton.disabled = false;
-  }
+ if (videoPreviewCommentToggleButton) {
+  const commentLabel = videoPreviewCommentComposerOpen ? "Close Comment" : "Comment";
+  const commentCount = comments.length;
+  const commentCountLabel = buildCountLabel(commentCount, "COMMENT");
+
+  videoPreviewCommentToggleButton.classList.toggle("hidden", !context);
+
+  videoPreviewCommentToggleButton.innerHTML = `
+    <span>${escapeHtml(commentLabel)}</span>
+    <span class="ml-2 border-l border-current/20 pl-2 text-stone-300/70">
+      ${escapeHtml(commentCountLabel)}
+    </span>
+  `;
+
+  videoPreviewCommentToggleButton.className = [
+    videoPreviewCommentToggleButton.classList.contains("hidden") ? "hidden" : "",
+    "shrink-0 inline-flex items-center justify-center border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45",
+  ].join(" ").trim();
+
+  videoPreviewCommentToggleButton.disabled = false;
+}
 
   if (videoPreviewCommentsList) {
     videoPreviewCommentsList.innerHTML = !context
@@ -5937,23 +5953,30 @@ function renderVideoPreviewInteractionBar(previewState = getCurrentVideoPreviewS
     ? getMediaItemInteractionCounts(item, previewState.tripId, previewState.folderId)
     : null;
   const liked = Boolean(counts?.itemKey && isTargetLikedByCurrentUser(counts.itemKey));
+if (videoPreviewSocialSummary) {
+  videoPreviewSocialSummary.innerHTML = "";
+}
 
-  if (videoPreviewSocialSummary) {
-    videoPreviewSocialSummary.innerHTML = counts
-      ? [
-          renderSocialMetricBadge(counts.likeCount, "LIKE"),
-          renderSocialMetricBadge(counts.commentCount, "COMMENT"),
-        ].join("")
-      : "";
-  }
 
   if (videoPreviewLikeButton) {
-    videoPreviewLikeButton.textContent = liked ? "Liked" : "Like";
-    videoPreviewLikeButton.className = liked
-      ? "shrink-0 border border-amber-200/35 bg-amber-100/[0.07] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-amber-50 transition hover:border-amber-100/55 hover:bg-amber-100/[0.12] disabled:cursor-not-allowed disabled:opacity-45"
-      : "shrink-0 border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45";
-    videoPreviewLikeButton.disabled = !counts?.itemKey;
-  }
+  const likeLabel = liked ? "Liked" : "Like";
+  const likeCountLabel = counts
+    ? buildCountLabel(counts.likeCount, "LIKE")
+    : buildCountLabel(0, "LIKE");
+
+  videoPreviewLikeButton.innerHTML = `
+    <span>${escapeHtml(likeLabel)}</span>
+    <span class="ml-2 border-l border-current/20 pl-2 text-stone-300/70">
+      ${escapeHtml(likeCountLabel)}
+    </span>
+  `;
+
+  videoPreviewLikeButton.className = liked
+    ? "shrink-0 inline-flex items-center justify-center border border-amber-200/35 bg-amber-100/[0.07] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-amber-50 transition hover:border-amber-100/55 hover:bg-amber-100/[0.12] disabled:cursor-not-allowed disabled:opacity-45"
+    : "shrink-0 inline-flex items-center justify-center border border-white/12 bg-white/[0.03] px-3 py-2 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] uppercase tracking-[0.18em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45";
+
+  videoPreviewLikeButton.disabled = !counts?.itemKey;
+}
 }
 
 function renderMediaComment(comment, options = {}) {
