@@ -66,9 +66,11 @@ const vaultGate = document.getElementById("vault-gate");
 const appLoadingOverlay = document.getElementById("app-loading-overlay");
 const vaultFrameCanvas = document.getElementById("vault-frame");
 const vaultVideo = document.getElementById("vault-video");
+const vaultOpenImage = document.getElementById("vault-open-image");
 const vaultForm = document.getElementById("vault-form");
 const vaultPasswordInput = document.getElementById("vault-password-input");
 const vaultSubmitButton = document.getElementById("vault-submit-button");
+const vaultGoogleButton = document.getElementById("vault-google-signin-button");
 const vaultStatusText = document.getElementById("vault-status");
 const vaultLegalModal = document.getElementById("vault-legal-modal");
 const vaultLegalBackdrop = document.getElementById("vault-legal-backdrop");
@@ -466,6 +468,7 @@ let appInitializationPromise = null;
 let appLoadingOverlayHideTimeout = 0;
 let routeLoadingOverlayActive = false;
 let vaultIntroPlaying = false;
+let vaultGooglePromptBackdrop = "closed";
 let tripUnsubscribe = null;
 let usersUnsubscribe = null;
 let siteSettingsUnsubscribe = null;
@@ -491,6 +494,10 @@ function applyStaticStrings() {
 
   if (googleButton) {
     googleButton.textContent = STRINGS.auth.signInButton;
+  }
+
+  if (vaultGoogleButton) {
+    vaultGoogleButton.textContent = STRINGS.auth.signInButton;
   }
 
   if (signOutButton) {
@@ -668,43 +675,48 @@ async function initializeVaultExperience() {
   prepareVaultBackdrop();
 
   if (!vaultState.configured) {
-    setAppLoadingOverlayVisible(false);
-    lockSiteShell();
-    showVaultGate();
-    setVaultFormEnabled(false);
-    setVaultFormVisible(true);
-    setVaultStatusMessage(
-      String(
+    showVaultPasswordPrompt({
+      enabled: false,
+      isError: true,
+      message: String(
         vaultState.message || STRINGS.errors.vaultPasswordMissingHosted
       ).toUpperCase(),
-      true
-    );
+    });
     return;
   }
 
   if (vaultState.unlocked) {
     lockSiteShell();
-    hideVaultGateImmediately();
-    beginRouteLoadingOverlay();
+    showVaultGate();
+    setVaultGoogleButtonVisible(false);
+    setVaultFormEnabled(false);
+    setVaultFormVisible(false);
+    setVaultStatusMessage("RESTORING SESSION.");
     const [initResult] = await Promise.allSettled([initializeAppOnce()]);
     if (initResult.status === "rejected") {
-      showWarning(getErrorMessage(initResult.reason, "Initialization failed."));
+      const message = getErrorMessage(initResult.reason, "Initialization failed.");
+      setAppLoadingOverlayVisible(false);
+      routeLoadingOverlayActive = false;
+      showWarning(message);
+      setVaultStatusMessage(message.toUpperCase(), true);
+      return;
+    }
+
+    if (await settleExistingGoogleSession()) {
       renderAll();
       return;
     }
 
-    await settleExistingGoogleSession();
+    showVaultGooglePrompt("WELCOME, MEMBER", { focus: true, backdrop: "open" });
     renderAll();
     return;
   }
 
-  setAppLoadingOverlayVisible(false);
-  lockSiteShell();
-  showVaultGate();
-  setVaultFormEnabled(true);
-  setVaultFormVisible(true);
-  setVaultStatusMessage("");
-  vaultPasswordInput?.focus();
+  showVaultPasswordPrompt({
+    enabled: true,
+    focus: true,
+    message: "",
+  });
 }
 
 async function initializeAppOnce() {
@@ -932,6 +944,13 @@ function ensureAuthenticatedGoogleSession() {
     return false;
   }
 
+  if (!hasActiveGoogleSession()) {
+    showVaultGooglePrompt(
+      googleSignInRequestInFlight ? "SIGNING IN WITH GOOGLE." : "WELCOME, MEMBER."
+    );
+    return false;
+  }
+
   if (!vaultGate?.classList.contains("hidden")) {
     hideVaultGate();
   }
@@ -1115,8 +1134,32 @@ function setVaultFormEnabled(enabled) {
 }
 
 function setVaultFormVisible(visible) {
+  setElementVisible(vaultForm, visible, "flex");
   vaultForm?.classList.toggle("opacity-0", !visible);
   vaultForm?.classList.toggle("pointer-events-none", !visible);
+}
+
+function setVaultOpenBackdropVisible(visible) {
+  if (!vaultOpenImage) {
+    return;
+  }
+
+  vaultOpenImage.classList.toggle("hidden", !visible);
+  vaultOpenImage.classList.toggle("opacity-0", !visible);
+  vaultOpenImage.classList.toggle("opacity-100", visible);
+}
+
+function setVaultGooglePromptBackdrop(mode) {
+  vaultGooglePromptBackdrop = mode === "video" ? "video" : mode === "open" ? "open" : "closed";
+  setVaultOpenBackdropVisible(vaultGooglePromptBackdrop === "open");
+}
+
+function setVaultGoogleButtonVisible(visible) {
+  setElementVisible(vaultGoogleButton, visible, "flex");
+}
+
+function setVaultGoogleButtonEnabled(enabled) {
+  vaultGoogleButton?.toggleAttribute("disabled", !enabled);
 }
 
 function setVaultStatusMessage(message, isError = false) {
@@ -1130,16 +1173,63 @@ function setVaultStatusMessage(message, isError = false) {
   vaultStatusText.classList.toggle("text-stone-200/72", !isError);
 }
 
+function showVaultPasswordPrompt({
+  message = "",
+  isError = false,
+  enabled = true,
+  focus = false,
+} = {}) {
+  routeLoadingOverlayActive = false;
+  setAppLoadingOverlayVisible(false);
+  lockSiteShell();
+  showVaultGate();
+  setVaultGooglePromptBackdrop("closed");
+  setVaultGoogleButtonEnabled(true);
+  setVaultGoogleButtonVisible(false);
+  setVaultFormEnabled(enabled);
+  setVaultFormVisible(true);
+  setVaultStatusMessage(message, isError);
+
+  if (focus && enabled) {
+    vaultPasswordInput?.focus();
+  }
+}
+
+function showVaultGooglePrompt(
+  message = "WELCOME, MEMBER.",
+  { isError = false, focus = false, backdrop = vaultGooglePromptBackdrop } = {}
+) {
+  routeLoadingOverlayActive = false;
+  setAppLoadingOverlayVisible(false);
+  lockSiteShell();
+  showVaultGate();
+  setVaultGooglePromptBackdrop(backdrop);
+  setVaultFormEnabled(false);
+  setVaultFormVisible(false);
+  setVaultGoogleButtonEnabled(
+    !googleSignInRequestInFlight &&
+      !googleRedirectInProgress &&
+      !hasPendingGoogleRedirectResult()
+  );
+  setVaultGoogleButtonVisible(true);
+  setVaultStatusMessage(message, isError);
+
+  if (focus && vaultGoogleButton && !vaultGoogleButton.hasAttribute("disabled")) {
+    vaultGoogleButton.focus();
+  }
+}
+
 async function handleVaultSubmit(event) {
   event.preventDefault();
 
   if (!vaultState.configured) {
-    setVaultStatusMessage(
-      String(
+    showVaultPasswordPrompt({
+      enabled: false,
+      isError: true,
+      message: String(
         vaultState.message || STRINGS.errors.vaultPasswordMissingHosted
       ).toUpperCase(),
-      true
-    );
+    });
     return;
   }
 
@@ -1152,6 +1242,7 @@ async function handleVaultSubmit(event) {
   }
 
   setVaultFormEnabled(false);
+  setVaultGoogleButtonVisible(false);
   setVaultFormVisible(true);
   setVaultStatusMessage("VERIFYING PASSWORD.");
 
@@ -1183,10 +1274,12 @@ async function handleVaultSubmit(event) {
     const [initializeResult] = await Promise.allSettled([initializeAppOnce()]);
 
     if (initializeResult.status === "rejected") {
-      showWarning(getErrorMessage(initializeResult.reason, "Initialization failed."));
-      setVaultFormEnabled(true);
-      setVaultFormVisible(true);
-      setVaultStatusMessage("INITIALIZATION FAILED.", true);
+      const message = getErrorMessage(initializeResult.reason, "Initialization failed.");
+      setAppLoadingOverlayVisible(false);
+      routeLoadingOverlayActive = false;
+      showWarning(message);
+      setVaultGoogleButtonVisible(false);
+      setVaultStatusMessage(message.toUpperCase(), true);
       return;
     }
 
@@ -1196,15 +1289,19 @@ async function handleVaultSubmit(event) {
 
     closeVaultLegalModal({ restoreFocus: false });
 
-    await settleExistingGoogleSession();
-    hideVaultGate();
+    if (await settleExistingGoogleSession()) {
+      renderAll();
+      return;
+    }
+
+    showVaultGooglePrompt("WELCOME, MEMBER.", { focus: true, backdrop: "video" });
     renderAll();
   } catch (error) {
-    setVaultFormVisible(true);
-    setVaultStatusMessage(
-      getErrorMessage(error, "Vault unlock failed.").toUpperCase(),
-      true
-    );
+    showVaultPasswordPrompt({
+      enabled: true,
+      isError: true,
+      message: getErrorMessage(error, "Vault unlock failed.").toUpperCase(),
+    });
   } finally {
     if (!vaultState.unlocked) {
       setVaultFormEnabled(true);
@@ -1218,6 +1315,7 @@ async function playVaultIntro() {
     return;
   }
 
+  setVaultGooglePromptBackdrop("closed");
   vaultIntroPlaying = true;
   vaultVideo.classList.remove("opacity-0");
   vaultVideo.classList.add("opacity-100");
@@ -1406,6 +1504,7 @@ function initializeTripBrowserEvents() {
 
 function setupForms() {
   vaultForm?.addEventListener("submit", handleVaultSubmit);
+  vaultGoogleButton?.addEventListener("click", handleVaultGoogleSignIn);
   vaultLegalTriggers.forEach((button) => {
     button.addEventListener("click", handleVaultLegalTriggerClick);
   });
@@ -2403,6 +2502,7 @@ async function settleExistingGoogleSession() {
   }
 
   await waitForFirebaseAuthState();
+  authStateReady = true;
 
   if (auth.currentUser?.uid && currentUser?.uid !== auth.currentUser.uid) {
     await activateAuthenticatedGoogleSession(auth.currentUser);
@@ -2475,13 +2575,19 @@ async function settleGoogleRedirectResultIfNeeded() {
 }
 
 async function requestGoogleSignIn(message = STRINGS.auth.signingIn, options = {}) {
+  const usingVaultGate = options?.surface === "vault";
+
   if (!auth) {
-    showWarning("Firebase Auth is not ready. Check the Firebase values in .env.");
-    return;
+    const errorMessage = "Firebase Auth is not ready. Check the Firebase values in .env.";
+    showWarning(errorMessage);
+    if (usingVaultGate) {
+      showVaultGooglePrompt(errorMessage.toUpperCase(), { isError: true, focus: true });
+    }
+    return false;
   }
 
   if (googleSignInRequestInFlight || googleRedirectInProgress || hasPendingGoogleRedirectResult()) {
-    return;
+    return false;
   }
 
   googleSignInRequestInFlight = true;
@@ -2490,6 +2596,10 @@ async function requestGoogleSignIn(message = STRINGS.auth.signingIn, options = {
     if (authDetail && message) {
       authDetail.textContent = message;
     }
+    if (usingVaultGate && message) {
+      setVaultStatusMessage(message);
+      setVaultGoogleButtonEnabled(false);
+    }
 
     const provider = createGoogleProvider();
 
@@ -2497,7 +2607,7 @@ async function requestGoogleSignIn(message = STRINGS.auth.signingIn, options = {
       googleRedirectInProgress = true;
       window.sessionStorage?.setItem(GOOGLE_REDIRECT_STORAGE_KEY, "1");
       await signInWithRedirect(auth, provider);
-      return;
+      return true;
     }
 
     const result = await signInWithPopup(auth, provider);
@@ -2505,19 +2615,37 @@ async function requestGoogleSignIn(message = STRINGS.auth.signingIn, options = {
     if (await activateAuthenticatedGoogleSession(result?.user || auth.currentUser)) {
       syncDefaultAdminMode();
       renderAll();
+      return true;
     }
   } catch (error) {
     googleRedirectInProgress = false;
     googleSignInRequestInFlight = false;
+    const friendlyMessage = getFriendlyAuthMessage(error);
     if (authDetail) {
-      authDetail.textContent = getFriendlyAuthMessage(error);
+      authDetail.textContent = friendlyMessage;
     }
-    return;
+    if (usingVaultGate) {
+      showVaultGooglePrompt(friendlyMessage, { isError: true, focus: true });
+    }
+    return false;
   }
 
   if (!options?.redirect) {
     googleSignInRequestInFlight = false;
+    if (usingVaultGate && !hasActiveGoogleSession()) {
+      showVaultGooglePrompt("WELCOME, MEMBER.", { focus: true });
+    }
   }
+
+  return hasActiveGoogleSession();
+}
+
+async function handleVaultGoogleSignIn() {
+  googleRedirectResultPending = false;
+  googleRedirectInProgress = false;
+  googleSignInRequestInFlight = false;
+  window.sessionStorage?.removeItem(GOOGLE_REDIRECT_STORAGE_KEY);
+  await requestGoogleSignIn("SIGNING IN WITH GOOGLE.", { surface: "vault" });
 }
 
 async function handleGoogleSignIn() {
@@ -10397,7 +10525,7 @@ function renderAuth() {
     setSignOutButtonsVisible(false);
     uploadQueuePanel?.classList.add("hidden");
     adminPanel?.classList.add("hidden");
-    setGoogleButtonVisible(true);
+    setGoogleButtonVisible(false);
     return;
   }
 
@@ -13041,7 +13169,7 @@ function renderMobileProfileMenu(visibleMembers = getVisibleMembers(), onlineMem
   actionButtons.forEach((button) => {
     setElementVisible(button, signedIn, "block");
   });
-  setElementVisible(mobileMenuSignInButton, !signedIn, "block");
+  setElementVisible(mobileMenuSignInButton, false, "block");
 
   if (mobileMenuMemberSummary) {
     mobileMenuMemberSummary.innerHTML = signedIn

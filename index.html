@@ -378,6 +378,7 @@
     <video id="vault-video" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500" preload="auto" playsinline muted>
       <source src="/assets/vault-intro.mp4" type="video/mp4">
     </video>
+    <img id="vault-open-image" src="/assets/open-vault.png" alt="" aria-hidden="true" class="pointer-events-none absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-500">
     <div aria-hidden="true" class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.08),transparent_22%,rgba(0,0,0,0.2)_78%,rgba(0,0,0,0.38))]"></div>
 
     <div class="absolute inset-x-0 bottom-10 z-10 flex justify-center px-4 sm:bottom-12">
@@ -389,6 +390,9 @@
             Unlock
           </button>
         </form>
+        <button id="vault-google-signin-button" type="button" class="hidden mx-auto mt-3 w-full max-w-md items-center justify-center border border-white/18 bg-black/14 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.22em] text-stone-100 backdrop-blur-[1px] transition hover:border-white/32 hover:bg-white/[0.04] disabled:pointer-events-none disabled:opacity-45">
+          Sign In With Google
+        </button>
         <div class="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-white/10 pt-3">
           <span class="font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.52rem] uppercase tracking-[0.3em] text-stone-400/42">Site Info</span>
           <button type="button" data-vault-legal-trigger="privacy" aria-haspopup="dialog" aria-controls="vault-legal-modal" class="vault-legal-trigger border-b border-transparent bg-transparent px-0 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.2em] text-stone-300/62">
