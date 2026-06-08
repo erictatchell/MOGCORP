@@ -2937,7 +2937,8 @@ async function handleMediaItemLikeButtonClick() {
   videoPreviewLikeButton?.toggleAttribute("disabled", true);
 
   try {
-    const nextLiked = await toggleLikeForContext(context, currentUser.uid);
+    const desiredLiked = !isTargetLikedByCurrentUser(context.targetKey);
+    const nextLiked = await toggleLikeForContext(context, currentUser.uid, desiredLiked);
     applyLocalLikeState(context.targetKey, currentUser.uid, nextLiked);
     scheduleInteractionRefresh();
   } catch (error) {
@@ -3088,7 +3089,8 @@ async function handleSocialLikeToggleClick(trigger) {
   trigger.disabled = true;
 
   try {
-    const nextLiked = await toggleLikeForContext(context, currentUser.uid);
+    const desiredLiked = !isTargetLikedByCurrentUser(context.targetKey);
+    const nextLiked = await toggleLikeForContext(context, currentUser.uid, desiredLiked);
     applyLocalLikeState(context.targetKey, currentUser.uid, nextLiked);
     scheduleInteractionRefresh();
   } catch (error) {
@@ -8599,19 +8601,19 @@ function getLikedArrayValueForContext(context) {
   return String(context?.targetKey || "");
 }
 
-async function toggleLikeForContext(context, userUid) {
+async function toggleLikeForContext(context, userUid, desiredLiked = null) {
   try {
-    return await writeLikeStateTransaction(context, userUid, true);
+    return await writeLikeStateTransaction(context, userUid, true, desiredLiked);
   } catch (error) {
     if (!isFirestorePermissionError(error)) {
       throw error;
     }
 
-    return writeLikeStateTransaction(context, userUid, false);
+    return writeLikeStateTransaction(context, userUid, false, desiredLiked);
   }
 }
 
-async function writeLikeStateTransaction(context, userUid, includeCreatedAtMs = true) {
+async function writeLikeStateTransaction(context, userUid, includeCreatedAtMs = true, desiredLiked = null) {
   const likeRef = getLikeDocRefForContext(context, userUid);
   const targetRef = getLikeTargetDocRef(context);
   const userRef = userUid ? doc(db, runtimeConfig.collections.users, userUid) : null;
@@ -8627,11 +8629,9 @@ async function writeLikeStateTransaction(context, userUid, includeCreatedAtMs = 
     const targetSnapshot = await transaction.get(targetRef);
     const mirrorTargetSnapshots = [];
     const mirrorTargetRefs = getLikeMirrorTargetDocRefs(context, targetRef);
-    const nextLiked = !likeSnapshot.exists();
+    const hasLikeDoc = likeSnapshot.exists();
+    const nextLiked = typeof desiredLiked === "boolean" ? desiredLiked : !hasLikeDoc;
     const currentLikeCount = Math.max(Number(targetSnapshot.data()?.likeCount || 0), 0);
-    const nextLikeCount = nextLiked
-      ? currentLikeCount + 1
-      : Math.max(currentLikeCount - 1, 0);
     const likePayload = includeCreatedAtMs
       ? {
           createdAt: serverTimestamp(),
@@ -8648,9 +8648,9 @@ async function writeLikeStateTransaction(context, userUid, includeCreatedAtMs = 
       });
     }
 
-    if (nextLiked) {
+    if (nextLiked && !hasLikeDoc) {
       transaction.set(likeRef, likePayload);
-      transaction.update(targetRef, { likeCount: nextLikeCount });
+      transaction.update(targetRef, { likeCount: currentLikeCount + 1 });
       mirrorTargetSnapshots.forEach(({ ref, snapshot }) => {
         if (snapshot.exists()) {
           const mirrorLikeCount = Math.max(Number(snapshot.data()?.likeCount || 0), 0);
@@ -8658,9 +8658,17 @@ async function writeLikeStateTransaction(context, userUid, includeCreatedAtMs = 
         }
       });
       transaction.update(userRef, { [likedArrayField]: arrayUnion(likedArrayValue) });
-    } else {
+      return true;
+    }
+
+    if (nextLiked && hasLikeDoc) {
+      transaction.update(userRef, { [likedArrayField]: arrayUnion(likedArrayValue) });
+      return true;
+    }
+
+    if (!nextLiked && hasLikeDoc) {
       transaction.delete(likeRef);
-      transaction.update(targetRef, { likeCount: nextLikeCount });
+      transaction.update(targetRef, { likeCount: Math.max(currentLikeCount - 1, 0) });
       mirrorTargetSnapshots.forEach(({ ref, snapshot }) => {
         if (snapshot.exists()) {
           const mirrorLikeCount = Math.max(Number(snapshot.data()?.likeCount || 0), 0);
@@ -8668,9 +8676,11 @@ async function writeLikeStateTransaction(context, userUid, includeCreatedAtMs = 
         }
       });
       transaction.update(userRef, { [likedArrayField]: arrayRemove(likedArrayValue) });
+      return false;
     }
 
-    return nextLiked;
+    transaction.update(userRef, { [likedArrayField]: arrayRemove(likedArrayValue) });
+    return false;
   });
 }
 
@@ -9391,6 +9401,16 @@ function handleTripBrowserClick(event) {
 
   if (editTrigger) {
     handleItemEditClick(editTrigger);
+    return;
+  }
+
+  const mediaCardPreviewTrigger = event.target.closest("[data-action='preview-media-card']");
+
+  if (
+    mediaCardPreviewTrigger &&
+    !event.target.closest("a[href], button, input, textarea, select, label, summary, details, form")
+  ) {
+    handleVideoPreviewClick(mediaCardPreviewTrigger);
     return;
   }
 
@@ -12297,8 +12317,10 @@ function renderMobileItemCard(item, tripId, folderId, view = "archive", options 
     detailsClass: "relative shrink-0",
     summaryLabel: "Item actions",
   });
+  const cardPreviewable = item.kind === "file" && isPreviewableMediaItem(item);
   const cardClass = [
     `relative overflow-visible border ${certified ? "border-amber-300/28 bg-[rgba(255,221,138,0.028)]" : "border-white/8 bg-black/10"} px-1.5 py-1.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.66rem] tracking-[0.06em] text-stone-200/85 transition hover:bg-white/[0.03]`,
+    cardPreviewable ? "cursor-pointer" : "",
     previewRowSelected ? "bg-white/[0.04] ring-1 ring-white/12" : "",
     viewedRecently ? "text-stone-500/72" : "",
   ]
@@ -12307,6 +12329,7 @@ function renderMobileItemCard(item, tripId, folderId, view = "archive", options 
 
   return `
     <article
+      ${cardPreviewable ? `data-action="preview-media-card"` : ""}
       data-preview-row="true"
       data-view="${escapeHtml(view)}"
       data-trip-id="${escapeHtml(tripId)}"
