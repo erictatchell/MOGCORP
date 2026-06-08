@@ -7302,10 +7302,11 @@ function syncActivityNotificationButtons(count = getNewMediaCommentNotificationC
     countOnly: true,
     className: "ml-2 min-w-5 justify-center px-1.5 py-1 text-[0.54rem]",
   });
-  const content = `<span class="inline-flex w-full items-center justify-center gap-2"><span>Activity Feed</span>${badgeMarkup}</span>`;
 
   [bannerActivityButton, desktopActivityButton, mobileMenuActivityButton].forEach((button) => {
     if (button) {
+      const alignmentClass = button === mobileMenuActivityButton ? "justify-start" : "justify-center";
+      const content = `<span class="inline-flex w-full items-center ${alignmentClass} gap-2"><span>Activity Feed</span>${badgeMarkup}</span>`;
       button.innerHTML = content;
     }
   });
