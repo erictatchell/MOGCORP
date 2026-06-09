@@ -1669,7 +1669,7 @@ function setupForms() {
   mobileMenuArchiveButton?.addEventListener("click", handleMobileMenuArchiveClick);
   mobileMenuProfileButton?.addEventListener("click", handleMobileMenuProfileClick);
   mobileMenuActivityButton?.addEventListener("click", handleMobileMenuActivityClick);
-  mobileMenuMembersButton?.addEventListener("click", handleMobileMenuMembersClick);
+mobileMenuMemberSummary?.addEventListener("click", handleMobileMenuMemberSummaryClick);
   mobileMenuSignOutButton?.addEventListener("click", handleMobileMenuSignOutClick);
   mobileMenuSignInButton?.addEventListener("click", handleMobileMenuSignInClick);
   desktopRouteToggleLink?.addEventListener("click", handleRouteToggleClick);
@@ -1747,6 +1747,17 @@ function handleMobileMenuProfileClick() {
 
 function handleMobileMenuActivityClick() {
   navigateFromMobileMenu({ kind: ROUTE_FEED });
+}
+
+function handleMobileMenuMemberSummaryClick(event) {
+  const viewAllButton = event.target.closest("#mobile-menu-all-members-button");
+
+  if (!viewAllButton) {
+    return;
+  }
+
+  event.preventDefault();
+  navigateFromMobileMenu({ kind: ROUTE_MEMBERS });
 }
 
 function handleMobileMenuMembersClick() {
@@ -14606,12 +14617,11 @@ function renderFriendsPanel() {
 function renderMobileProfileMenu(visibleMembers = getVisibleMembers(), onlineMembers = getOnlineMembers(visibleMembers)) {
   const signedIn = Boolean(currentUser?.uid);
   const hasArchiveAccess = canUploadMedia();
-  const routeButtons = [
-    mobileMenuArchiveButton,
-    mobileMenuProfileButton,
-    mobileMenuActivityButton,
-    mobileMenuMembersButton,
-  ];
+ const routeButtons = [
+  mobileMenuArchiveButton,
+  mobileMenuProfileButton,
+  mobileMenuActivityButton,
+];
   const actionButtons = [
     mobileMenuSignOutButton,
   ];
@@ -14624,12 +14634,85 @@ function renderMobileProfileMenu(visibleMembers = getVisibleMembers(), onlineMem
   });
   setElementVisible(mobileMenuSignInButton, false, "block");
 
-  if (mobileMenuMemberSummary) {
-    mobileMenuMemberSummary.innerHTML = signedIn
-      ? `${escapeHtml(formatPlainMemberCount(visibleMembers.length))}<br><span class="text-emerald-300/86">${escapeHtml(formatOnlineMemberCount(onlineMembers.length))}</span>`
-      : "";
-    mobileMenuMemberSummary.classList.toggle("hidden", !signedIn);
-  }
+if (mobileMenuMemberSummary) {
+  const onlineMarkup = onlineMembers.length > 0
+    ? onlineMembers
+        .map((friend) => {
+          const label = getFriendLabel(friend);
+          const profileHref = friend.routeId ? buildProfilePath(friend.routeId) : "";
+
+        const imageUrl = String(
+  friend.photoURL ||
+  friend.profileImageUrl ||
+  friend.profileImage ||
+  DEFAULT_PROFILE_IMAGE_URL
+).trim() || DEFAULT_PROFILE_IMAGE_URL;
+
+return profileHref
+  ? `
+    <a
+      href="${escapeHtml(profileHref)}"
+      class="flex items-center gap-2 border border-white/8 bg-black/20 px-2 py-2 transition hover:border-white/20 hover:bg-white/[0.06]"
+      data-mobile-menu-profile-link="true"
+    >
+      <img
+        src="${escapeHtml(imageUrl)}"
+        alt=""
+        class="h-7 w-7 shrink-0 border border-white/12 object-cover"
+        loading="lazy"
+      >
+      <span class="h-2 w-2 shrink-0 border border-emerald-200/50 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.45)]"></span>
+      <span class="min-w-0 break-words text-[0.6rem] text-stone-100 [overflow-wrap:anywhere]">
+        ${escapeHtml(label)}
+      </span>
+    </a>
+  `
+  : `
+    <div class="flex items-center gap-2 border border-white/8 bg-black/20 px-2 py-2 opacity-60">
+      <img
+        src="${escapeHtml(imageUrl)}"
+        alt=""
+        class="h-7 w-7 shrink-0 border border-white/12 object-cover"
+        loading="lazy"
+      >
+      <span class="h-2 w-2 shrink-0 border border-emerald-200/50 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.45)]"></span>
+      <span class="min-w-0 break-words text-[0.6rem] text-stone-100 [overflow-wrap:anywhere]">
+        ${escapeHtml(label)}
+      </span>
+    </div>
+  `;
+        })
+        .join("")
+    : `<p class="text-[0.58rem] text-stone-500/80">NO MEMBERS ONLINE.</p>`;
+
+  mobileMenuMemberSummary.innerHTML = signedIn
+    ? `
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-[0.62rem]">
+          <span class="flex flex-col text-left leading-5">
+            <span>${escapeHtml(formatPlainMemberCount(visibleMembers.length))}</span>
+            <span class="text-emerald-300/86">${escapeHtml(formatOnlineMemberCount(onlineMembers.length))}</span>
+          </span>
+          <span class="text-stone-500/80">▾</span>
+        </summary>
+
+        <div class="border-t border-white/10 px-3 py-3">
+          <div class="space-y-2">
+            ${onlineMarkup}
+          </div>
+
+          <button
+            id="mobile-menu-all-members-button"
+            type="button"
+            class="mt-3 w-full border border-white/12 bg-white/[0.03] px-3 py-2 text-left text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]"
+          >
+            View All Members
+          </button>
+        </div>
+      `
+    : "";
+
+  mobileMenuMemberSummary.classList.toggle("hidden", !signedIn);
+}
 
   syncMobileMenuRouteButtonStates();
 }
@@ -14647,10 +14730,7 @@ function syncMobileMenuRouteButtonStates() {
     mobileMenuActivityButton,
     isFeedRoute()
   );
-  syncMobileMenuRouteButtonState(
-    mobileMenuMembersButton,
-    isMembersRoute()
-  );
+
 }
 
 function syncMobileMenuRouteButtonState(button, active = false) {

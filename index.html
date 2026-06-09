@@ -590,7 +590,30 @@
               <span class="absolute left-0.5 top-0.5 h-3.5 w-3.5 rounded-full bg-stone-200/80 transition peer-checked:translate-x-4 peer-checked:bg-sky-200"></span>
             </span>
           </label>
+<details
+  id="mobile-menu-member-summary"
+  class="hidden border border-white/10 bg-black/20 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] uppercase tracking-[0.18em] text-stone-300/70"
+>
+  <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-[0.62rem]">
+    <span class="flex flex-col text-left leading-5">
+      <span id="mobile-menu-member-count">0 MEMBERS</span>
+      <span id="mobile-menu-online-count" class="text-emerald-300/86">0 ONLINE</span>
+    </span>
+    <span class="text-stone-500/80">▾</span>
+  </summary>
 
+  <div class="border-t border-white/10 px-3 py-3">
+    <div id="mobile-menu-online-members-list" class="space-y-2"></div>
+
+    <button
+      id="mobile-menu-all-members-button"
+      type="button"
+      class="mt-3 w-full border border-white/12 bg-white/[0.03] px-3 py-2 text-left text-[0.62rem] uppercase tracking-[0.2em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]"
+    >
+      View All Members
+    </button>
+  </div>
+</details>
           <p id="mobile-menu-member-summary" class="hidden border border-white/10 bg-black/20 px-3 py-3 text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.62rem] uppercase tracking-[0.18em] text-stone-300/70"></p>
 
           <button id="mobile-menu-archive-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
@@ -602,9 +625,7 @@
           <button id="mobile-menu-activity-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
             Activity Feed
           </button>
-          <button id="mobile-menu-members-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
-            Members
-          </button>
+       
           <button id="mobile-menu-sign-out-button" type="button" class="hidden w-full border border-white/12 bg-white/[0.03] px-3 py-3 text-left font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.7rem] uppercase tracking-[0.22em] text-stone-100 transition hover:border-white/30 hover:bg-white/[0.08]">
             Sign Out
           </button>
