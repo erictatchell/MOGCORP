@@ -153,6 +153,13 @@ test("server smoke: SPA routes and static modules are served", async (t) => {
   assert.equal(health.status, 200);
   assert.equal((await health.json()).ok, true);
 
+  const vaultStatus = await fetch(`${baseUrl}/api/vault/status`);
+  assert.equal(vaultStatus.status, 200);
+  assert.equal((await vaultStatus.json()).unlocked, false);
+
+  const config = await fetch(`${baseUrl}/api/config`);
+  assert.equal(config.status, 403);
+
   const feed = await fetch(`${baseUrl}/feed`);
   assert.equal(feed.status, 200);
   assert.match(await feed.text(), /<section id="feed-page"/);

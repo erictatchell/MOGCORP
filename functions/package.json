@@ -1,0 +1,12 @@
+{
+  "name": "100gigz-firebase-functions",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-functions": "^6.0.1"
+  }
+}
