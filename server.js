@@ -13,12 +13,15 @@ loadEnvFile(envPath);
 loadEnvFile(path.join(workspaceRoot, ".env.local"));
 
 const port = Number.parseInt(process.env.PORT || "3000", 10);
-const vaultPassword = process.env.VAULT_PASSWORD || "";
-const vaultCookieName = "vault_access";
+function getVaultPassword() {
+  return process.env.VAULT_PASSWORD || "";
+}
+
+function getVaultCookieValue() {
+  const password = getVaultPassword();
+  return password ? buildVaultCookieValue(password) : "";
+}const vaultCookieName = "vault_access";
 const vaultCookieMaxAgeSeconds = 7 * 24 * 60 * 60;
-const vaultCookieValue = vaultPassword
-  ? buildVaultCookieValue(vaultPassword)
-  : "";
 
 export default async function handler(request, response) {
   try {
@@ -150,7 +153,7 @@ async function handleVaultVerify(request, response) {
   const submittedPassword =
     payload && typeof payload.password === "string" ? payload.password : "";
 
-  if (!safeEqualString(submittedPassword, vaultPassword)) {
+if (!safeEqualString(submittedPassword, getVaultPassword())) {
     return sendJson(
       response,
       401,
@@ -303,7 +306,7 @@ function sendText(response, statusCode, text, extraHeaders = {}) {
 }
 
 function isVaultConfigured() {
-  return Boolean(vaultPassword);
+return Boolean(getVaultPassword());
 }
 
 function isVaultUnlocked(request) {
@@ -312,7 +315,7 @@ function isVaultUnlocked(request) {
   }
 
   const cookies = parseCookies(request.headers.cookie || "");
-  return safeEqualString(cookies[vaultCookieName] || "", vaultCookieValue);
+return safeEqualString(cookies[vaultCookieName] || "", getVaultCookieValue());
 }
 
 function buildVaultCookieValue(password) {
@@ -327,7 +330,7 @@ function buildVaultCookieValue(password) {
 function buildVaultCookieHeader(request) {
   const expiresAt = new Date(Date.now() + vaultCookieMaxAgeSeconds * 1000).toUTCString();
   return [
-    `${vaultCookieName}=${vaultCookieValue}`,
+`${vaultCookieName}=${getVaultCookieValue()}`,
     "Path=/",
     "HttpOnly",
     "SameSite=Lax",

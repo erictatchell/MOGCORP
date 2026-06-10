@@ -3,8 +3,10 @@ import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 
 const vaultPasswordSecret = defineSecret("VAULT_PASSWORD");
-const VAULT_COOKIE_NAME = "vault_access";
+
+const VAULT_COOKIE_NAME = "__session";
 const VAULT_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
 const DEFAULT_PUBLIC_CONFIG = {
   adminEmails: ["erictatch@gmail.com"],
   firebaseConfig: {
@@ -34,10 +36,15 @@ export const api = onRequest(
         request.url || "/",
         `https://${request.headers.host || "localhost"}`
       );
+
       const pathname = decodeURIComponent(requestUrl.pathname);
 
       if (pathname === "/api/vault/status") {
         return sendJson(response, 200, buildVaultStatus(request));
+      }
+
+      if (pathname === "/api/vault/debug") {
+        return sendJson(response, 200, buildVaultDebug(request));
       }
 
       if (pathname === "/api/vault/verify") {
@@ -73,6 +80,7 @@ export const api = onRequest(
 
       if (pathname === "/api/health") {
         const config = buildPublicConfig();
+
         return sendJson(response, 200, {
           ok: true,
           date: new Date().toISOString(),
@@ -109,6 +117,31 @@ function buildVaultStatus(request) {
     message: configured
       ? ""
       : "VAULT_PASSWORD is not available to this deployment.",
+  };
+}
+
+function buildVaultDebug(request) {
+  const cookies = parseCookies(request.headers.cookie || "");
+  const receivedCookie = cookies[VAULT_COOKIE_NAME] || "";
+  const expectedCookie = getVaultCookieValue();
+
+  return {
+    configured: isVaultConfigured(),
+    unlocked: isVaultUnlocked(request),
+
+    hasCookieHeader: Boolean(request.headers.cookie),
+    cookieHeaderLength: String(request.headers.cookie || "").length,
+    cookiesFound: Object.keys(cookies),
+
+    receivedCookieLength: receivedCookie.length,
+    expectedCookieLength: expectedCookie.length,
+
+    receivedCookiePrefix: receivedCookie.slice(0, 24),
+    expectedCookiePrefix: expectedCookie.slice(0, 24),
+
+    isHttps: isHttpsRequest(request),
+    host: request.headers.host || "",
+    forwardedProto: request.headers["x-forwarded-proto"] || "",
   };
 }
 
@@ -177,44 +210,29 @@ async function handleVaultVerify(request, response) {
     payload && typeof payload.password === "string" ? payload.password : "";
 
   if (!safeEqualString(submittedPassword, getVaultPassword())) {
-    return sendJson(
-      response,
-      401,
-      {
-        error: "invalid_password",
-        message: "Incorrect vault password.",
-      },
-      {
-        "Set-Cookie": buildExpiredVaultCookie(request),
-      }
-    );
+    response.setHeader("Set-Cookie", buildExpiredVaultCookie(request));
+
+    return sendJson(response, 401, {
+      error: "invalid_password",
+      message: "Incorrect vault password.",
+    });
   }
 
-  return sendJson(
-    response,
-    200,
-    {
-      ok: true,
-      unlocked: true,
-    },
-    {
-      "Set-Cookie": buildVaultCookieHeader(request),
-    }
-  );
+  response.setHeader("Set-Cookie", buildVaultCookieHeader(request));
+
+  return sendJson(response, 200, {
+    ok: true,
+    unlocked: true,
+  });
 }
 
 function handleVaultLogout(request, response) {
-  return sendJson(
-    response,
-    200,
-    {
-      ok: true,
-      unlocked: false,
-    },
-    {
-      "Set-Cookie": buildExpiredVaultCookie(request),
-    }
-  );
+  response.setHeader("Set-Cookie", buildExpiredVaultCookie(request));
+
+  return sendJson(response, 200, {
+    ok: true,
+    unlocked: false,
+  });
 }
 
 function sendJson(response, statusCode, payload, extraHeaders = {}) {
@@ -246,7 +264,10 @@ function isVaultUnlocked(request) {
   }
 
   const cookies = parseCookies(request.headers.cookie || "");
-  return safeEqualString(cookies[VAULT_COOKIE_NAME] || "", getVaultCookieValue());
+  const receivedCookie = cookies[VAULT_COOKIE_NAME] || "";
+  const expectedCookie = getVaultCookieValue();
+
+  return safeEqualString(receivedCookie, expectedCookie);
 }
 
 function getVaultPassword() {
@@ -262,17 +283,24 @@ function getSecretValue(secretParam) {
 }
 
 function getVaultCookieValue() {
-  const vaultPassword = getVaultPassword();
-  return vaultPassword ? buildVaultCookieValue(vaultPassword) : "";
+  const password = getVaultPassword();
+
+  if (!password) {
+    return "";
+  }
+
+  return buildVaultCookieValue(password);
 }
 
 function buildVaultCookieValue(password) {
-  return `${VAULT_COOKIE_NAME}.${createHmac(
+  const signature = createHmac(
     "sha256",
     process.env.VAULT_SESSION_SECRET || password
   )
     .update("100gigz-vault")
-    .digest("hex")}`;
+    .digest("hex");
+
+  return `${VAULT_COOKIE_NAME}.${signature}`;
 }
 
 function buildVaultCookieHeader(request) {
@@ -337,8 +365,11 @@ function parseCookies(cookieHeader) {
 }
 
 function safeEqualString(left, right) {
-  const leftBuffer = Buffer.from(String(left));
-  const rightBuffer = Buffer.from(String(right));
+  const leftValue = String(left || "");
+  const rightValue = String(right || "");
+
+  const leftBuffer = Buffer.from(leftValue);
+  const rightBuffer = Buffer.from(rightValue);
 
   if (leftBuffer.length !== rightBuffer.length) {
     return false;
@@ -381,6 +412,7 @@ async function readRequestBody(request) {
 
       chunks.push(chunk);
     });
+
     request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     request.on("error", reject);
   });
