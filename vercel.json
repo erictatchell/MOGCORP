@@ -25,7 +25,11 @@
     {
       "src": "assets/**",
       "use": "@vercel/static"
-    }
+    },
+    {
+  "src": ".well-known/**",
+  "use": "@vercel/static"
+}
   ],
   "rewrites": [
     {
