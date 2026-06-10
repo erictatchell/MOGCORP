@@ -38,14 +38,14 @@
     },
     {
       "source": "/.well-known/:path*",
-      "destination": "/public/.well-known/:path*"
+      "destination": "/.well-known/:path*"
     },
     {
       "source": "/404",
       "destination": "/404.html"
     },
     {
-      "source": "/((?!api/|public/|static/|assets/|\\.well-known/).*)",
+      "source": "/((?!api/|static/|assets/|\\.well-known/).*)",
       "destination": "/index.html"
     }
   ]
