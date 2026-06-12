@@ -196,12 +196,26 @@ test("vault gate footer links directly to public policy pages", async () => {
   const footerMatch = html.match(/<div class="mt-4 flex flex-wrap items-center justify-center gap-x-4[\s\S]*?<\/div>/);
 
   assert.ok(footerMatch, "vault footer link area should exist");
-  assert.match(footerMatch[0], /href="\/privacy"[\s\S]*Privacy/);
+  assert.match(footerMatch[0], /href="\/policy"[\s\S]*Privacy/);
   assert.match(footerMatch[0], /href="\/terms"[\s\S]*Terms/);
   assert.doesNotMatch(footerMatch[0], /Site Info/);
   assert.doesNotMatch(footerMatch[0], /Contact/);
   assert.doesNotMatch(footerMatch[0], /Compliance/);
   assert.doesNotMatch(footerMatch[0], /data-vault-legal-trigger/);
+});
+
+test("vault password input avoids mobile focus zoom", async () => {
+  const [html, appSource] = await Promise.all([
+    readText("public/index.html"),
+    readText("public/static/app.js"),
+  ]);
+
+  assert.match(html, /id="vault-access-panel"/);
+  assert.match(html, /id="vault-password-input"[^>]*text-\[16px\]/);
+  assert.match(html, /id="vault-password-input"[^>]*sm:text-\[0\.72rem\]/);
+  assert.match(html, /html\.vault-keyboard-active #vault-access-panel/);
+  assert.match(appSource, /function updateVaultKeyboardLift\(\)/);
+  assert.match(appSource, /visualViewport\?\.addEventListener\("resize", updateVaultKeyboardLift\)/);
 });
 
 test("server smoke: SPA routes and static modules are served", async (t) => {

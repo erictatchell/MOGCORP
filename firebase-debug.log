@@ -1,0 +1,87 @@
+[debug] [2026-06-12T16:35:22.647Z] ----------------------------------------------------------------------
+[debug] [2026-06-12T16:35:22.651Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\pos1\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy -P mgc-1-9f15d
+[debug] [2026-06-12T16:35:22.651Z] CLI Version:   15.20.0
+[debug] [2026-06-12T16:35:22.652Z] Platform:      win32
+[debug] [2026-06-12T16:35:22.652Z] Node Version:  v24.16.0
+[debug] [2026-06-12T16:35:22.652Z] Time:          Fri Jun 12 2026 09:35:22 GMT-0700 (Pacific Daylight Time)
+[debug] [2026-06-12T16:35:22.652Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-12T16:35:27.413Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-12T16:35:27.414Z] > authorizing via signed-in user (erictatch@gmail.com)
+[debug] [2026-06-12T16:35:27.414Z] [iam] checking project mgc-1-9f15d for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]
+[debug] [2026-06-12T16:35:27.415Z] Checked if tokens are valid: false, expires at: 1781281798811
+[debug] [2026-06-12T16:35:27.415Z] Checked if tokens are valid: false, expires at: 1781281798811
+[debug] [2026-06-12T16:35:27.416Z] > refreshing access token with scopes: []
+[debug] [2026-06-12T16:35:27.418Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-12T16:35:27.418Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-12T16:35:27.550Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-06-12T16:35:27.550Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-12T16:35:27.558Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d:testIamPermissions [none]
+[debug] [2026-06-12T16:35:27.558Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d:testIamPermissions  x-goog-user-project=mgc-1-9f15d
+[debug] [2026-06-12T16:35:27.558Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2026-06-12T16:35:27.685Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d:testIamPermissions 200
+[debug] [2026-06-12T16:35:27.686Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2026-06-12T16:35:27.686Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:27.686Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:27.686Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/mgc-1-9f15d/serviceAccounts/mgc-1-9f15d@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-06-12T16:35:27.686Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/mgc-1-9f15d/serviceAccounts/mgc-1-9f15d@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-06-12T16:35:28.009Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/mgc-1-9f15d/serviceAccounts/mgc-1-9f15d@appspot.gserviceaccount.com:testIamPermissions 404
+[debug] [2026-06-12T16:35:28.009Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/mgc-1-9f15d/serviceAccounts/mgc-1-9f15d@appspot.gserviceaccount.com:testIamPermissions {"error":{"code":404,"message":"Unknown service account","status":"NOT_FOUND"}}
+[debug] [2026-06-12T16:35:28.009Z] [functions] service account IAM check errored, deploy may fail: Request to https://iam.googleapis.com/v1/projects/mgc-1-9f15d/serviceAccounts/mgc-1-9f15d@appspot.gserviceaccount.com:testIamPermissions had HTTP Error: 404, Unknown service account {"name":"FirebaseError","children":[],"context":{"body":{"error":{"code":404,"message":"Unknown service account","status":"NOT_FOUND"}},"response":{"statusCode":404}},"exit":1,"message":"Request to https://iam.googleapis.com/v1/projects/mgc-1-9f15d/serviceAccounts/mgc-1-9f15d@appspot.gserviceaccount.com:testIamPermissions had HTTP Error: 404, Unknown service account","status":404}
+[debug] [2026-06-12T16:35:28.010Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.010Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.011Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/mgc-1-9f15d [none]
+[debug] [2026-06-12T16:35:28.377Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/mgc-1-9f15d 200
+[debug] [2026-06-12T16:35:28.377Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/mgc-1-9f15d {"projectId":"mgc-1-9f15d","projectNumber":"513728179403","displayName":"100GIGZ","name":"projects/mgc-1-9f15d","resources":{"hostingSite":"mgc-1-9f15d"},"state":"ACTIVE","etag":"1_07058976-1307-4946-9a5c-1fb732cbf58a"}
+[info] 
+[info] === Deploying to 'mgc-1-9f15d'...
+[info] 
+[info] i  deploying storage, firestore, functions, hosting 
+[info] i  storage: ensuring required API firebasestorage.googleapis.com is enabled... 
+[debug] [2026-06-12T16:35:28.382Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.382Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.382Z] >>> [apiv2][query] GET https://firebasestorage.googleapis.com/v1alpha/projects/mgc-1-9f15d/defaultBucket [none]
+[debug] [2026-06-12T16:35:28.586Z] <<< [apiv2][status] GET https://firebasestorage.googleapis.com/v1alpha/projects/mgc-1-9f15d/defaultBucket 200
+[debug] [2026-06-12T16:35:28.586Z] <<< [apiv2][body] GET https://firebasestorage.googleapis.com/v1alpha/projects/mgc-1-9f15d/defaultBucket {"name":"projects/mgc-1-9f15d/defaultBucket","location":"US-WEST1","bucket":{"name":"projects/mgc-1-9f15d/buckets/mgc-1-9f15d.firebasestorage.app"},"storageClass":"REGIONAL"}
+[info] i  firebase.storage: checking storage.rules for compilation errors... 
+[debug] [2026-06-12T16:35:28.588Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.588Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.588Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test [none]
+[debug] [2026-06-12T16:35:28.588Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test [omitted]
+[debug] [2026-06-12T16:35:28.951Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test 200
+[debug] [2026-06-12T16:35:28.951Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test {}
+[info] +  firebase.storage: rules file storage.rules compiled successfully 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-06-12T16:35:28.953Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.954Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:28.954Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/mgc-1-9f15d/databases/(default) [none]
+[debug] [2026-06-12T16:35:29.392Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/mgc-1-9f15d/databases/(default) 200
+[debug] [2026-06-12T16:35:29.392Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/mgc-1-9f15d/databases/(default) {"name":"projects/mgc-1-9f15d/databases/(default)","uid":"9f9d7676-df0d-4adf-a0ee-9ce704fa522c","createTime":"2026-06-04T22:20:53.372375Z","updateTime":"2026-06-04T22:20:53.372375Z","locationId":"nam5","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-06-12T15:35:29.409925Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"s","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IN3qxYSRgpUDMJSBse/V7pQD"}
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2026-06-12T16:35:29.394Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:29.394Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:29.394Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test [none]
+[debug] [2026-06-12T16:35:29.394Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test [omitted]
+[debug] [2026-06-12T16:35:30.049Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test 200
+[debug] [2026-06-12T16:35:30.049Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/mgc-1-9f15d:test {}
+[info] +  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2026-06-12T16:35:30.051Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:30.051Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:30.051Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d [none]
+[debug] [2026-06-12T16:35:30.157Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d 200
+[debug] [2026-06-12T16:35:30.157Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/mgc-1-9f15d {"projectNumber":"513728179403","projectId":"mgc-1-9f15d","lifecycleState":"ACTIVE","name":"100GIGZ","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-06-04T22:19:41.347Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-06-12T16:35:30.169Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:30.169Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:30.169Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/mgc-1-9f15d/adminSdkConfig [none]
+[debug] [2026-06-12T16:35:30.395Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/mgc-1-9f15d/adminSdkConfig 200
+[debug] [2026-06-12T16:35:30.395Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/mgc-1-9f15d/adminSdkConfig {"projectId":"mgc-1-9f15d","storageBucket":"mgc-1-9f15d.firebasestorage.app"}
+[debug] [2026-06-12T16:35:30.395Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:30.395Z] Checked if tokens are valid: true, expires at: 1781285726550
+[debug] [2026-06-12T16:35:30.395Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/mgc-1-9f15d/configs [none]
+[debug] [2026-06-12T16:35:30.580Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/mgc-1-9f15d/configs 200
+[debug] [2026-06-12T16:35:30.580Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/mgc-1-9f15d/configs {}

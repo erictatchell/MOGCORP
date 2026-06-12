@@ -250,6 +250,22 @@
       text-decoration-color: rgba(255, 255, 255, 0.7);
     }
 
+    #vault-access-panel {
+      transition: transform 180ms ease;
+      will-change: transform;
+    }
+
+    html.vault-keyboard-active #vault-access-panel {
+      transform: translate3d(0, calc(-1 * var(--vault-keyboard-lift, 0px)), 0);
+    }
+
+    @media (max-width: 640px) {
+      #vault-password-input {
+        font-size: 16px;
+        line-height: 1.2;
+      }
+    }
+
     .site-footer-route-link {
       transition:
         color 180ms ease,
@@ -381,11 +397,11 @@
     <img id="vault-open-image" src="/assets/open-vault.png" alt="" aria-hidden="true" class="pointer-events-none absolute inset-0 hidden h-full w-full object-cover opacity-0 transition-opacity duration-500">
     <div aria-hidden="true" class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.08),transparent_22%,rgba(0,0,0,0.2)_78%,rgba(0,0,0,0.38))]"></div>
 
-    <div class="absolute inset-x-0 bottom-10 z-10 flex justify-center px-4 sm:bottom-12">
+    <div id="vault-access-panel" class="absolute inset-x-0 bottom-10 z-10 flex justify-center px-4 sm:bottom-12">
       <div class="w-full max-w-xl">
         <p id="vault-status" class="mb-3 hidden text-center font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.24em] text-stone-100/78"></p>
         <form id="vault-form" class="mx-auto flex max-w-md items-stretch justify-center gap-2">
-          <input id="vault-password-input" name="password" type="password" autocomplete="current-password" class="min-w-0 flex-1 border border-white/18 bg-black/14 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] tracking-[0.18em] text-stone-100 outline-none backdrop-blur-[1px] transition placeholder:text-stone-200/52 focus:border-white/32" placeholder="KEY" required>
+          <input id="vault-password-input" name="password" type="password" autocomplete="current-password" class="min-w-0 flex-1 border border-white/18 bg-black/14 px-4 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[16px] tracking-[0.18em] text-stone-100 outline-none backdrop-blur-[1px] transition placeholder:text-stone-200/52 focus:border-white/32 sm:text-[0.72rem]" placeholder="KEY" required>
           <button id="vault-submit-button" type="submit" class="shrink-0 border border-white/18 bg-black/14 px-6 py-3 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.72rem] uppercase tracking-[0.18em] text-stone-100 backdrop-blur-[1px] transition hover:border-white/32 hover:bg-white/[0.04]">
             Unlock
           </button>
@@ -394,7 +410,7 @@
           Sign In With Google
         </button>
         <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/10 pt-3">
-          <a href="/privacy" class="vault-legal-trigger border-b border-transparent bg-transparent px-0 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.2em] text-stone-300/62">
+          <a href="/policy" class="vault-legal-trigger border-b border-transparent bg-transparent px-0 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.2em] text-stone-300/62">
             Privacy
           </a>
           <a href="/terms" class="vault-legal-trigger border-b border-transparent bg-transparent px-0 py-0.5 font-['Cascadia_Mono','JetBrains_Mono',Consolas,monospace] text-[0.58rem] uppercase tracking-[0.2em] text-stone-300/62">
